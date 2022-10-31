@@ -15,7 +15,27 @@ namespace thesoup {
      *
      * \brief Sub namespace with all numeric classes and functions.
      * */
-    namespace type {
+    namespace types {
+
+        /**
+         * \class Vector
+         * \tparam T The success type.
+         * \tparam page_size The page size.
+         *
+         * \brief A vector implementation with a hybrid of linked-list and contiguous memory array.
+         *
+         * Usage:
+         * ------
+         * Vector<int, 4> my_vec;
+         * my_vec.push_back(1);
+         * my_vec.push_back(2);
+         * my_vec.push_back(3);
+         *
+         * for (auto& item : my_vec) {
+         *     std::cout << item << "\n";
+         * }
+         *
+         * */
 
         template <typename T, std::size_t page_size> class Vector {
 

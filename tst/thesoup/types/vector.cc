@@ -4,7 +4,7 @@
 #include <thesoup/types/vector.hpp>
 #include <catch2/catch_all.hpp>
 
-using thesoup::type::Vector;
+using thesoup::types::Vector;
 
 struct Weird3byteStruct {
     char a;
