@@ -1,10 +1,11 @@
 #define CATCH_CONFIG_MAIN
 
+#include <exception>
 #include <iterator>
 #include <thesoup/types/vector.hpp>
 #include <catch2/catch_all.hpp>
 
-using thesoup::types::Vector;
+using thesoup::types::PartitionedVector;
 
 struct Weird3byteStruct {
     char a;
@@ -16,11 +17,11 @@ bool operator==(const Weird3byteStruct& lhs, const Weird3byteStruct& rhs) {
     return lhs.a == rhs.a && lhs.b == rhs.b && lhs.c == rhs.c;
 }
 
-SCENARIO("Vector happy case.") {
+SCENARIO("PartitionedVector happy case.") {
 
     GIVEN("I have a vector.") {
 
-        Vector<Weird3byteStruct, 4> my_vec {};
+        PartitionedVector<Weird3byteStruct, 4> my_vec {};
 
         WHEN("I insert some items in it.") {
 
@@ -75,7 +76,7 @@ SCENARIO("Vector happy case.") {
 
             AND_WHEN("I assign another vector from this one via a move.") {
 
-                Vector<Weird3byteStruct, 4> other_vec {};
+                PartitionedVector<Weird3byteStruct, 4> other_vec {};
                 other_vec = std::move(my_vec);
 
                 THEN("The other vector should be properly initialized.") {
@@ -95,11 +96,11 @@ SCENARIO("Vector happy case.") {
     }
 }
 
-SCENARIO("Vector iterations.") {
+SCENARIO("PartitionedVector iterations.") {
 
     GIVEN("I have a vector with some elements in it.") {
 
-        Vector<Weird3byteStruct, 4> my_vec;
+        PartitionedVector<Weird3byteStruct, 4> my_vec;
         my_vec.push_back({'a', 'b', 'c'});
         my_vec.push_back({'a', 'b', 'd'});
         my_vec.push_back({'a', 'b', 'e'});
@@ -138,6 +139,66 @@ SCENARIO("Vector iterations.") {
                 REQUIRE(static_cast<long>(my_vec.size()) == std::distance(my_vec.end(), my_vec.begin()));
             }
 
+        }
+    }
+}
+
+SCENARIO("Partitions test.") {
+
+    GIVEN("I have a vector of type int.") {
+
+        PartitionedVector<int, sizeof (int) * 4> my_vec {};
+
+        WHEN("I push back a number of items into it.") {
+
+            my_vec.push_back(1);
+            my_vec.push_back(2);
+            my_vec.push_back(3);
+            my_vec.push_back(4);
+            my_vec.push_back(5);
+            my_vec.push_back(6);
+            my_vec.push_back(7);
+
+            AND_WHEN("I query the number of partitions.") {
+
+                THEN("It should be correct (2 in this case).") {
+
+                    REQUIRE(2 == my_vec.num_partitions());
+                }
+            }
+
+            AND_WHEN("I get the first partition.") {
+
+                THEN("It should be as expected in terms of size and contents.") {
+
+                    auto partition {my_vec.get_partition(0)};
+                    REQUIRE(4 == partition.size);
+                    REQUIRE(1 == partition[0]);
+                    REQUIRE(2 == partition[1]);
+                    REQUIRE(3 == partition[2]);
+                    REQUIRE(4 == partition[3]);
+                }
+            }
+
+            AND_WHEN("I get the second partition.") {
+
+                THEN("It should be as expected in terms of size and contents.") {
+
+                    auto partition {my_vec.get_partition(1)};
+                    REQUIRE(3 == partition.size);
+                    REQUIRE(5 == partition[0]);
+                    REQUIRE(6 == partition[1]);
+                    REQUIRE(7 == partition[2]);
+                }
+            }
+
+            AND_WHEN("I get the third partition.") {
+
+                THEN("It should throw an error.") {
+                    
+                    REQUIRE_THROWS_AS(my_vec.get_partition(2), std::out_of_range);
+                }
+            }
         }
     }
 }

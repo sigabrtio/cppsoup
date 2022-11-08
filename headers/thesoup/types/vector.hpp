@@ -2,7 +2,11 @@
 
 #include <algorithm>
 #include <iterator>
+
+#include <iostream>
 #include <vector>
+
+#include <thesoup/types/types.hpp>
 
 /**
  * \namespace thesoup
@@ -18,7 +22,7 @@ namespace thesoup {
     namespace types {
 
         /**
-         * \class Vector
+         * \class PartitionedVector
          * \tparam T The success type.
          * \tparam page_size The page size.
          *
@@ -26,7 +30,7 @@ namespace thesoup {
          *
          * Usage:
          * ------
-         * Vector<int, 4> my_vec;
+         * PartitionedVector<int, 4> my_vec;
          * my_vec.push_back(1);
          * my_vec.push_back(2);
          * my_vec.push_back(3);
@@ -37,35 +41,43 @@ namespace thesoup {
          *
          * */
 
-        template <typename T, std::size_t page_size> class Vector {
+        template <typename T, std::size_t page_size> class PartitionedVector {
 
         private:
-            std::vector<T*> pages {};
+            struct Page {
+                T* start;
+                T* end;
+                T* next;
+            };
+            std::vector<Page> pages {};
             std::size_t _size {};
 
             static constexpr std::size_t num_items_per_page = page_size / sizeof(T);
 
             void allocate_new_page() {
                 T* new_page = reinterpret_cast<T*>(new char(page_size));
-                pages.push_back(new_page);
+                if (pages.size() > 0) {
+                    pages.back().next = new_page;
+                }
+                pages.push_back({new_page, new_page, nullptr});
             }
         public:
-            Vector() {}
-            ~Vector() {
-                for (T* ptr: pages) {
-                    delete ptr;
+            PartitionedVector() {}
+            ~PartitionedVector() {
+                for (auto page: pages) {
+                    delete page.start;
                 }
             }
-            Vector(Vector<T, page_size>& other)=delete;
-            Vector(Vector<T,page_size>&& other) : pages {other.pages}, _size {other._size} {
+            PartitionedVector(PartitionedVector<T, page_size>& other)=delete;
+            PartitionedVector(PartitionedVector<T,page_size>&& other) : pages {other.pages}, _size {other._size} {
                 other.pages.clear();
                 other._size = 0;
             }
 
-            void operator=(Vector<T, page_size>& other)=delete;
-            void operator=(Vector<T, page_size>&& other) {
-                for (T* ptr: pages) {
-                    delete ptr;
+            void operator=(PartitionedVector<T, page_size>& other)=delete;
+            void operator=(PartitionedVector<T, page_size>&& other) {
+                for (auto page: pages) {
+                    delete page.start;
                 }
                 pages.clear();
                 std::copy(other.pages.begin(), other.pages.end(), std::back_inserter(pages));
@@ -73,23 +85,23 @@ namespace thesoup {
                 other.pages.clear();
                 other._size = 0;
             }
-            Vector<T, page_size>& operator*() {return *this;}
-            Vector<T, page_size>* operator->() {return this;}
+            PartitionedVector<T, page_size>& operator*() {return *this;}
+            PartitionedVector<T, page_size>* operator->() {return this;}
 
             void push_back(const T& item) noexcept {
                 std::size_t page_number_to_insert_to {(_size)/num_items_per_page};
-                std::size_t page_offset {_size - page_number_to_insert_to * num_items_per_page};
                 if (page_number_to_insert_to >= pages.size()) {
                     allocate_new_page();
                 }
-                pages[page_number_to_insert_to][page_offset] = item;
+                *(pages[page_number_to_insert_to].end) = item;
+                pages[page_number_to_insert_to].end++;
                 _size++;
             }
 
             T& operator[](const std::size_t idx) {
                 std::size_t page_num {idx/num_items_per_page};
                 std::size_t page_offset {idx - page_num * num_items_per_page};
-                return pages[page_num][page_offset];
+                return pages[page_num].start[page_offset];
             }
 
             std::size_t size() const noexcept {
@@ -100,6 +112,21 @@ namespace thesoup {
                 return pages.size() * page_size;
             }
 
+            std::size_t num_partitions() const noexcept {
+                return pages.size();
+            }
+
+            thesoup::types::Slice<T> get_partition(const std::size_t partition_id) {
+                if (partition_id >= pages.size()) {
+                    throw std::out_of_range("Partition absent.");
+                }
+                return Slice<T> {
+                    pages[partition_id].start,
+                    static_cast<std::size_t>(std::distance(pages[partition_id].start, pages[partition_id].end))
+                };
+            }
+
+            // TODO: Optimize ++ and -- operators at least
             struct Iterator {
                 using iterator_category [[maybe_unused]] = std::random_access_iterator_tag;
                 using difference_type   = std::ptrdiff_t;
@@ -107,17 +134,17 @@ namespace thesoup {
                 using pointer           = T*;
                 using reference         = T&;
 
-                Vector<T, page_size>* enclosing;
+                PartitionedVector<T, page_size>* enclosing;
                 std::size_t idx {};
 
                 Iterator(
-                        Vector<T, page_size>* enclosing,
+                        PartitionedVector<T, page_size>* enclosing,
                         const std::size_t& idx) : enclosing {enclosing}, idx {idx} {}
 
                 reference operator*() noexcept {return (*enclosing)[idx];}
                 pointer operator->() noexcept {return &(*enclosing)[idx];}
 
-                Iterator& operator++() noexcept { idx++; return *this;}
+                Iterator& operator++() noexcept {idx++; return *this;}
                 Iterator operator++(int) noexcept { Iterator tmp {enclosing, idx}; idx++; return tmp;}
 
                 Iterator& operator--() noexcept { idx--; return *this;}
