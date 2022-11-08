@@ -53,6 +53,20 @@ SCENARIO("Slice test happy case") {
             test_arr.size()
         };
 
+        WHEN("I move it.") {
+
+            Slice<int> moved {std::move(test_slice)};
+
+            THEN("The new copy should be properly initialized and the ld one should be reset.") {
+
+                REQUIRE(test_arr.size() == moved.size);
+                REQUIRE(&test_arr[0] == moved.start);
+
+                REQUIRE(0 == test_slice.size);
+                REQUIRE(nullptr == test_slice.start);
+            }
+        }
+
         WHEN("I access elements") {
 
             int test1 {test_slice[0]};

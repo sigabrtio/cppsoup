@@ -195,7 +195,7 @@ SCENARIO("Partitions test.") {
             AND_WHEN("I get the third partition.") {
 
                 THEN("It should throw an error.") {
-                    
+
                     REQUIRE_THROWS_AS(my_vec.get_partition(2), std::out_of_range);
                 }
             }

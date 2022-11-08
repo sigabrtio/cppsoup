@@ -153,6 +153,13 @@ namespace thesoup {
             // The copy constructor and assignment operator need to be removed. Ideally, we do not want slices to be shared.
             Slice(const Slice<T>&)=delete;
             void operator=(const Slice<T>&)=delete;
+            void operator=(Slice<T>&& other)=delete;
+
+            // We will still define a move constructor
+            Slice(Slice<T>&& other): start {other.start}, size {other.size} {
+                other.start = nullptr;
+                other.size = 0;
+            }
 
             T& operator[](const std::size_t& idx) {
                 if (idx >= size) {

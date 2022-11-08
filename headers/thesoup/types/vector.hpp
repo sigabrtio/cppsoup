@@ -44,43 +44,38 @@ namespace thesoup {
         template <typename T, std::size_t page_size> class PartitionedVector {
 
         private:
-            struct Page {
-                T* start;
-                T* end;
-                T* next;
-            };
-            std::vector<Page> pages {};
+            std::vector<thesoup::types::Slice<T>> pages;
             std::size_t _size {};
 
             static constexpr std::size_t num_items_per_page = page_size / sizeof(T);
 
             void allocate_new_page() {
                 T* new_page = reinterpret_cast<T*>(new char(page_size));
-                if (pages.size() > 0) {
-                    pages.back().next = new_page;
-                }
-                pages.push_back({new_page, new_page, nullptr});
+                pages.emplace_back(new_page, 0);
             }
         public:
             PartitionedVector() {}
             ~PartitionedVector() {
-                for (auto page: pages) {
+                for (auto& page: pages) {
                     delete page.start;
                 }
             }
             PartitionedVector(PartitionedVector<T, page_size>& other)=delete;
-            PartitionedVector(PartitionedVector<T,page_size>&& other) : pages {other.pages}, _size {other._size} {
+            PartitionedVector(PartitionedVector<T, page_size>&& other) : pages {std::move(other.pages)}, _size {other._size} {
                 other.pages.clear();
                 other._size = 0;
             }
 
             void operator=(PartitionedVector<T, page_size>& other)=delete;
             void operator=(PartitionedVector<T, page_size>&& other) {
-                for (auto page: pages) {
+                for (auto& page: pages) {
                     delete page.start;
                 }
                 pages.clear();
-                std::copy(other.pages.begin(), other.pages.end(), std::back_inserter(pages));
+                pages.reserve(other.pages.size());
+                for (auto& slice : other.pages) {
+                    pages.template emplace_back(slice.start, slice.size);
+                }
                 _size = other._size;
                 other.pages.clear();
                 other._size = 0;
@@ -90,11 +85,12 @@ namespace thesoup {
 
             void push_back(const T& item) noexcept {
                 std::size_t page_number_to_insert_to {(_size)/num_items_per_page};
+                std::size_t page_offset {_size - page_number_to_insert_to * num_items_per_page};
                 if (page_number_to_insert_to >= pages.size()) {
                     allocate_new_page();
                 }
-                *(pages[page_number_to_insert_to].end) = item;
-                pages[page_number_to_insert_to].end++;
+                pages[page_number_to_insert_to].size++;
+                pages[page_number_to_insert_to][page_offset] = item;
                 _size++;
             }
 
@@ -122,7 +118,7 @@ namespace thesoup {
                 }
                 return Slice<T> {
                     pages[partition_id].start,
-                    static_cast<std::size_t>(std::distance(pages[partition_id].start, pages[partition_id].end))
+                    pages[partition_id].size
                 };
             }
 
