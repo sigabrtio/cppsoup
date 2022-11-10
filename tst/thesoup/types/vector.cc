@@ -5,7 +5,7 @@
 #include <thesoup/types/vector.hpp>
 #include <catch2/catch_all.hpp>
 
-using thesoup::types::PartitionedVector;
+using thesoup::types::VectorCache;
 
 struct Weird3byteStruct {
     char a;
@@ -17,11 +17,12 @@ bool operator==(const Weird3byteStruct& lhs, const Weird3byteStruct& rhs) {
     return lhs.a == rhs.a && lhs.b == rhs.b && lhs.c == rhs.c;
 }
 
-SCENARIO("PartitionedVector happy case.") {
+/*
+SCENARIO("VectorCache happy case.") {
 
-    GIVEN("I have a vector.") {
+    GIVEN("I have a vector with the page size width set to 2, implying that each page contains 4 elements.") {
 
-        PartitionedVector<Weird3byteStruct, 4> my_vec {};
+        VectorCache<Weird3byteStruct, 2> my_vec {};
 
         WHEN("I insert some items in it.") {
 
@@ -34,7 +35,7 @@ SCENARIO("PartitionedVector happy case.") {
                 AND_THEN("The size and capacity should match.") {
 
                     REQUIRE(my_vec.size() == 1);
-                    REQUIRE(my_vec.bytes() == 4);
+                    REQUIRE(my_vec.bytes() == 4*sizeof(Weird3byteStruct));
                 }
             }
 
@@ -42,16 +43,20 @@ SCENARIO("PartitionedVector happy case.") {
 
                 my_vec.push_back({'a','b','d'});
                 my_vec.push_back({'a','b','e'});
+                my_vec.push_back({'a','b','f'});
+                my_vec.push_back({'a','b','g'});
 
                 THEN("The items should be indexed correctly.") {
 
                     REQUIRE(Weird3byteStruct{'a','b','d'} == my_vec[1]);
                     REQUIRE(Weird3byteStruct{'a','b','e'} == my_vec[2]);
+                    REQUIRE(Weird3byteStruct{'a','b','f'} == my_vec[3]);
+                    REQUIRE(Weird3byteStruct{'a','b','g'} == my_vec[4]);
 
-                    AND_THEN("The sized and the capacity should work out.") {
+                    AND_THEN("The size and the capacity should work out. The capacity should be now of holding 8 elements.") {
 
-                        REQUIRE(3 == my_vec.size());
-                        REQUIRE(12 == my_vec.bytes());
+                        REQUIRE(5 == my_vec.size());
+                        REQUIRE(4*sizeof(Weird3byteStruct)*2 == my_vec.bytes());
                     }
                 }
             }
@@ -64,7 +69,7 @@ SCENARIO("PartitionedVector happy case.") {
 
                     REQUIRE(Weird3byteStruct{'a','b','c'} == other_vec[0]);
                     REQUIRE(1 == other_vec.size());
-                    REQUIRE(4 == other_vec.bytes());
+                    REQUIRE(4*sizeof(Weird3byteStruct) == other_vec.bytes());
 
                     AND_THEN("The original vector should have been reset.") {
 
@@ -76,14 +81,14 @@ SCENARIO("PartitionedVector happy case.") {
 
             AND_WHEN("I assign another vector from this one via a move.") {
 
-                PartitionedVector<Weird3byteStruct, 4> other_vec {};
+                VectorCache<Weird3byteStruct, 2> other_vec {};
                 other_vec = std::move(my_vec);
 
                 THEN("The other vector should be properly initialized.") {
 
                     REQUIRE(Weird3byteStruct{'a','b','c'} == other_vec[0]);
                     REQUIRE(1 == other_vec.size());
-                    REQUIRE(4 == other_vec.bytes());
+                    REQUIRE(4*sizeof(Weird3byteStruct) == other_vec.bytes());
 
                     AND_THEN("The original vector should have been reset.") {
 
@@ -96,11 +101,11 @@ SCENARIO("PartitionedVector happy case.") {
     }
 }
 
-SCENARIO("PartitionedVector iterations.") {
+SCENARIO("VectorCache iterations.") {
 
     GIVEN("I have a vector with some elements in it.") {
 
-        PartitionedVector<Weird3byteStruct, 4> my_vec;
+        VectorCache<Weird3byteStruct, 4> my_vec;
         my_vec.push_back({'a', 'b', 'c'});
         my_vec.push_back({'a', 'b', 'd'});
         my_vec.push_back({'a', 'b', 'e'});
@@ -142,12 +147,13 @@ SCENARIO("PartitionedVector iterations.") {
         }
     }
 }
+*/
 
 SCENARIO("Partitions test.") {
 
     GIVEN("I have a vector of type int.") {
 
-        PartitionedVector<int, sizeof (int) * 4> my_vec {};
+        VectorCache<int, 2> my_vec {};
 
         WHEN("I push back a number of items into it.") {
 

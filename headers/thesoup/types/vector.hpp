@@ -20,17 +20,16 @@ namespace thesoup {
      * \brief Sub namespace with all numeric classes and functions.
      * */
     namespace types {
-
         /**
-         * \class PartitionedVector
+         * \class VectorCache
          * \tparam T The success type.
-         * \tparam page_size The page size.
+         * \tparam page_size_exponent The page size exponent. The page size will be therefore 2^page_size_exponent, and the number of bytes will be page_size * sizeof(T)
          *
          * \brief A vector implementation with a hybrid of linked-list and contiguous memory array.
          *
          * Usage:
          * ------
-         * PartitionedVector<int, 4> my_vec;
+         * VectorCache<int, 4> my_vec;
          * my_vec.push_back(1);
          * my_vec.push_back(2);
          * my_vec.push_back(3);
@@ -40,34 +39,39 @@ namespace thesoup {
          * }
          *
          * */
-
-        template <typename T, std::size_t page_size> class PartitionedVector {
+        template <typename T, std::size_t page_size_exponent> class VectorCache {
+            static_assert(page_size_exponent < sizeof(std::size_t), "Exponent of page size cannot be more than the size of size_t");
 
         private:
+            constexpr static std::size_t page_size {(1 << page_size_exponent) * sizeof(T)};
+            constexpr static std::size_t num_items_per_page {1 << page_size_exponent};
+            constexpr static std::size_t page_offset_bit_mask = num_items_per_page - 1;
+            constexpr static std::size_t page_number_bit_mask = ~page_offset_bit_mask;
+
             std::vector<thesoup::types::Slice<T>> pages;
             std::size_t _size {};
 
-            static constexpr std::size_t num_items_per_page = page_size / sizeof(T);
+
 
             void allocate_new_page() {
                 T* new_page = reinterpret_cast<T*>(new char(page_size));
                 pages.emplace_back(new_page, 0);
             }
         public:
-            PartitionedVector() {}
-            ~PartitionedVector() {
+            VectorCache(){}
+            ~VectorCache() {
                 for (auto& page: pages) {
                     delete page.start;
                 }
             }
-            PartitionedVector(PartitionedVector<T, page_size>& other)=delete;
-            PartitionedVector(PartitionedVector<T, page_size>&& other) : pages {std::move(other.pages)}, _size {other._size} {
+            VectorCache(VectorCache<T, page_size_exponent>& other)=delete;
+            VectorCache(VectorCache<T, page_size_exponent>&& other) noexcept : pages {std::move(other.pages)}, _size {other._size} {
                 other.pages.clear();
                 other._size = 0;
             }
 
-            void operator=(PartitionedVector<T, page_size>& other)=delete;
-            void operator=(PartitionedVector<T, page_size>&& other) {
+            VectorCache<T, page_size_exponent>& operator=(VectorCache<T, page_size_exponent>& other)=delete;
+            VectorCache<T, page_size_exponent>& operator=(VectorCache<T, page_size_exponent>&& other) noexcept {
                 for (auto& page: pages) {
                     delete page.start;
                 }
@@ -79,13 +83,14 @@ namespace thesoup {
                 _size = other._size;
                 other.pages.clear();
                 other._size = 0;
+                return *this;
             }
-            PartitionedVector<T, page_size>& operator*() {return *this;}
-            PartitionedVector<T, page_size>* operator->() {return this;}
+            VectorCache<T, page_size_exponent>& operator*() {return *this;}
+            VectorCache<T, page_size_exponent>* operator->() {return this;}
 
             void push_back(const T& item) noexcept {
-                std::size_t page_number_to_insert_to {(_size)/num_items_per_page};
-                std::size_t page_offset {_size - page_number_to_insert_to * num_items_per_page};
+                std::size_t page_number_to_insert_to {(_size & page_number_bit_mask) >> page_size_exponent};
+                std::size_t page_offset {_size & page_offset_bit_mask};
                 if (page_number_to_insert_to >= pages.size()) {
                     allocate_new_page();
                 }
@@ -95,8 +100,8 @@ namespace thesoup {
             }
 
             T& operator[](const std::size_t idx) {
-                std::size_t page_num {idx/num_items_per_page};
-                std::size_t page_offset {idx - page_num * num_items_per_page};
+                std::size_t page_num {idx & page_number_bit_mask};
+                std::size_t page_offset {idx & page_offset_bit_mask};
                 return pages[page_num].start[page_offset];
             }
 
@@ -130,11 +135,11 @@ namespace thesoup {
                 using pointer           = T*;
                 using reference         = T&;
 
-                PartitionedVector<T, page_size>* enclosing;
+                VectorCache<T, page_size_exponent>* enclosing;
                 std::size_t idx {};
 
                 Iterator(
-                        PartitionedVector<T, page_size>* enclosing,
+                        VectorCache<T, page_size_exponent>* enclosing,
                         const std::size_t& idx) : enclosing {enclosing}, idx {idx} {}
 
                 reference operator*() noexcept {return (*enclosing)[idx];}
