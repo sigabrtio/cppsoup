@@ -2,7 +2,9 @@
 
 #include <variant>
 #include <string>
+#include <sstream>
 #include <stdexcept>
+#include <string>
 
 /**
  * \namespace thesoup
@@ -51,8 +53,8 @@ namespace thesoup {
                 _Error(const E& err): err {err} {}
                 _Error(E&& err): err {std::move(err)} {}
             };
-            const std::variant<T, _Error> store;
-            const bool is_error;
+            std::variant<T, _Error> store;
+            bool is_error;
 
             Result(const T& val) noexcept: store {val}, is_error {false} {}
             Result(T&& val) noexcept: store {std::move(val)}, is_error {false} {}
@@ -72,9 +74,21 @@ namespace thesoup {
              *
              * \return: Length of the vector (std::size_t)
              * */
-            const T& unwrap() {
+            T& unwrap() {
                 if (is_error) {
-                    throw std::runtime_error("Result attempted to be unwrapped on error.");
+                    std::stringstream ss;
+                    ss << std::get<_Error>(store).err;
+                    throw std::runtime_error(ss.str());
+                } else {
+                    return std::get<T>(store);
+                }
+            }
+
+            const T& unwrap() const {
+                if (is_error) {
+                    std::stringstream ss;
+                    ss << std::get<_Error>(store).err;
+                    throw std::runtime_error(ss.str());
                 } else {
                     return std::get<T>(store);
                 }
@@ -88,7 +102,15 @@ namespace thesoup {
              *
              * \return: Length of the vector (std::size_t)
              * */
-            const E& error() {
+            E& error() {
+                if (!is_error) {
+                    throw std::runtime_error("Error access attempted in success.");
+                } else {
+                    return std::get<_Error>(store).err;
+                }
+            }
+
+            const E& error() const {
                 if (!is_error) {
                     throw std::runtime_error("Error access attempted in success.");
                 } else {
@@ -183,7 +205,7 @@ namespace thesoup {
                 return start;
             }
 
-            const T* end() {
+            T* end() {
                 return &start[size];
             }
 

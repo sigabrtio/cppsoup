@@ -1,11 +1,18 @@
 #define CATCH_CONFIG_MAIN
 
+#include <algorithm>
 #include <exception>
 #include <iterator>
+#include <unordered_map>
 #include <thesoup/types/vector.hpp>
+#include <thesoup/types/types.hpp>
 #include <catch2/catch_all.hpp>
 
 using thesoup::types::VectorCache;
+using thesoup::types::Slice;
+using thesoup::types::Result;
+using thesoup::types::PageOffsetBits;
+using thesoup::types::PageIndexBits;
 
 struct Weird3byteStruct {
     char a;
@@ -17,15 +24,48 @@ bool operator==(const Weird3byteStruct& lhs, const Weird3byteStruct& rhs) {
     return lhs.a == rhs.a && lhs.b == rhs.b && lhs.c == rhs.c;
 }
 
-/*
+template <typename T> class InMemDB {
+private:
+    std::unordered_map<std::size_t, Slice<T>> store {};
+public:
+    void save(const Slice<T>& slice, const std::size_t& page_num) {
+        if (store.find(page_num) != store.end()) {
+            store[page_num].start = slice.start;
+            store[page_num].size = slice.size;
+        } else {
+            store.try_emplace(page_num, slice.start, slice.size);
+        }
+    }
+
+    Result<Slice<T>, int> load(const std::size_t& page_num) {
+        if (store.find(page_num) != store.end()) {
+            return Result<Slice<T>, int>::success(Slice(store[page_num].start, store[page_num].size));
+        } else {
+            return Result<Slice<T>, int>::failure(1);
+        }
+    }
+
+};
+
 SCENARIO("VectorCache happy case.") {
 
     GIVEN("I have a vector with the page size width set to 2, implying that each page contains 4 elements.") {
 
-        VectorCache<Weird3byteStruct, 2> my_vec {};
+        InMemDB<Weird3byteStruct> database;
+        auto saver = [&](const Slice<Weird3byteStruct>& slice, const std::size_t& page_num) {
+            database.save(slice, page_num);
+            return Result<bool, int>::success(true);
+        };
+        auto loader = [&](const std::size_t page_num) {return database.load(page_num);};
+
+        const PageIndexBits::type INDEX_BITS = 2;
+        const PageOffsetBits::type OFFSET_BITS = 2;
+
+        VectorCache<Weird3byteStruct, OFFSET_BITS, INDEX_BITS> my_vec(saver, loader);
 
         WHEN("I insert some items in it.") {
 
+            std::cout << "Pushing (a,b,c)\n";
             my_vec.push_back({'a','b','c'});
 
             THEN("The idem should be index able.") {
@@ -39,12 +79,18 @@ SCENARIO("VectorCache happy case.") {
                 }
             }
 
+
             AND_WHEN("I insert some more items.") {
 
+                std::cout << "Pushing (a,b,d)\n";
                 my_vec.push_back({'a','b','d'});
+                std::cout << "Pushing (a,b,e)\n";
                 my_vec.push_back({'a','b','e'});
+                std::cout << "Pushing (a,b,f)\n";
                 my_vec.push_back({'a','b','f'});
+                std::cout << "Pushing (a,b,g)\n";
                 my_vec.push_back({'a','b','g'});
+
 
                 THEN("The items should be indexed correctly.") {
 
@@ -69,7 +115,7 @@ SCENARIO("VectorCache happy case.") {
 
                     REQUIRE(Weird3byteStruct{'a','b','c'} == other_vec[0]);
                     REQUIRE(1 == other_vec.size());
-                    REQUIRE(4*sizeof(Weird3byteStruct) == other_vec.bytes());
+                    REQUIRE((1<<OFFSET_BITS)*sizeof(Weird3byteStruct) == other_vec.bytes());
 
                     AND_THEN("The original vector should have been reset.") {
 
@@ -79,24 +125,6 @@ SCENARIO("VectorCache happy case.") {
                 }
             }
 
-            AND_WHEN("I assign another vector from this one via a move.") {
-
-                VectorCache<Weird3byteStruct, 2> other_vec {};
-                other_vec = std::move(my_vec);
-
-                THEN("The other vector should be properly initialized.") {
-
-                    REQUIRE(Weird3byteStruct{'a','b','c'} == other_vec[0]);
-                    REQUIRE(1 == other_vec.size());
-                    REQUIRE(4*sizeof(Weird3byteStruct) == other_vec.bytes());
-
-                    AND_THEN("The original vector should have been reset.") {
-
-                        REQUIRE(0 == my_vec.size());
-                        REQUIRE(0 == my_vec.bytes());
-                    }
-                }
-            }
         }
     }
 }
@@ -105,7 +133,14 @@ SCENARIO("VectorCache iterations.") {
 
     GIVEN("I have a vector with some elements in it.") {
 
-        VectorCache<Weird3byteStruct, 4> my_vec;
+        InMemDB<Weird3byteStruct> database;
+        auto saver = [&](const Slice<Weird3byteStruct>& slice, const std::size_t& page_num) {
+            database.save(slice, page_num);
+            return Result<bool, int>::success(true);
+        };
+        auto loader = [&](const std::size_t page_num) {return database.load(page_num);};
+
+        VectorCache<Weird3byteStruct, 4, 2> my_vec{saver, loader};
         my_vec.push_back({'a', 'b', 'c'});
         my_vec.push_back({'a', 'b', 'd'});
         my_vec.push_back({'a', 'b', 'e'});
@@ -147,13 +182,19 @@ SCENARIO("VectorCache iterations.") {
         }
     }
 }
-*/
+
 
 SCENARIO("Partitions test.") {
 
     GIVEN("I have a vector of type int.") {
+        InMemDB<int> database;
+        auto saver = [&](const Slice<int>& slice, const std::size_t& page_num) {
+            database.save(slice, page_num);
+            return Result<bool, int>::success(true);
+        };
+        auto loader = [&](const std::size_t page_num) {return database.load(page_num);};
 
-        VectorCache<int, 2> my_vec {};
+        VectorCache<int, 2, 2> my_vec {saver, loader};
 
         WHEN("I push back a number of items into it.") {
 

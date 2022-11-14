@@ -1,8 +1,9 @@
 #pragma once
 
 #include <algorithm>
+#include <exception>
+#include <functional>
 #include <iterator>
-
 #include <iostream>
 #include <vector>
 
@@ -20,10 +21,18 @@ namespace thesoup {
      * \brief Sub namespace with all numeric classes and functions.
      * */
     namespace types {
+        struct PageOffsetBits {
+            using type = std::size_t;
+        };
+
+        struct PageIndexBits {
+            using type = std::size_t;
+        };
+
         /**
          * \class VectorCache
          * \tparam T The success type.
-         * \tparam page_size_exponent The page size exponent. The page size will be therefore 2^page_size_exponent, and the number of bytes will be page_size * sizeof(T)
+         * \tparam page_offset_bits The page size exponent. The page size will be therefore 2^page_offset_bits, and the number of bytes will be page_size * sizeof(T)
          *
          * \brief A vector implementation with a hybrid of linked-list and contiguous memory array.
          *
@@ -39,70 +48,126 @@ namespace thesoup {
          * }
          *
          * */
-        template <typename T, std::size_t page_size_exponent> class VectorCache {
-            static_assert(page_size_exponent < sizeof(std::size_t), "Exponent of page size cannot be more than the size of size_t");
+        template <typename T, PageOffsetBits::type page_offset_bits, PageIndexBits::type page_index_bits> class VectorCache {
+            static_assert(page_offset_bits + page_index_bits < sizeof (std::size_t), "Sum of page offset width and page index width cannot be greater than size of index.");
 
         private:
-            constexpr static std::size_t page_size {(1 << page_size_exponent) * sizeof(T)};
-            constexpr static std::size_t num_items_per_page {1 << page_size_exponent};
-            constexpr static std::size_t page_offset_bit_mask = num_items_per_page - 1;
-            constexpr static std::size_t page_number_bit_mask = ~page_offset_bit_mask;
+            struct Page {
+                thesoup::types::Slice<T> slice {nullptr, 0};
+                bool valid {false};
+                std::size_t page_number {0};
+            };
 
-            std::vector<thesoup::types::Slice<T>> pages;
+            constexpr static std::size_t page_size {(1 << page_offset_bits)};
+            constexpr static std::size_t num_items_per_page {1 << page_offset_bits};
+            constexpr static std::size_t page_offset_bit_mask {num_items_per_page - 1};
+
+            constexpr static std::size_t page_number_bit_mask {~page_offset_bit_mask};
+
+            constexpr static std::size_t page_table_size {1 << page_index_bits};
+            constexpr static std::size_t page_table_entry_bit_mask {page_table_size-1};
+
+            const std::function<thesoup::types::Result<bool, int>(const thesoup::types::Slice<T>& page, const std::size_t& page_number)> saver;
+            const std::function<thesoup::types::Result<thesoup::types::Slice<T>, int>(const std::size_t& page_number)> loader;
+
+            std::vector<Page> page_table {page_table_size};
             std::size_t _size {};
+            std::size_t num_pages {};
 
-
-
-            void allocate_new_page() {
-                T* new_page = reinterpret_cast<T*>(new char(page_size));
-                pages.emplace_back(new_page, 0);
-            }
         public:
-            VectorCache(){}
+            VectorCache(
+                    const std::function<thesoup::types::Result<bool, int>(const thesoup::types::Slice<T>&, const std::size_t& page_num)>& saver,
+                    const std::function<thesoup::types::Result<thesoup::types::Slice<T>, int>(const std::size_t&)>& loader
+                    ) : saver {saver}, loader {loader} {}
             ~VectorCache() {
-                for (auto& page: pages) {
-                    delete page.start;
+                for (auto& page: page_table) {
+                    delete page.slice.start;
                 }
             }
-            VectorCache(VectorCache<T, page_size_exponent>& other)=delete;
-            VectorCache(VectorCache<T, page_size_exponent>&& other) noexcept : pages {std::move(other.pages)}, _size {other._size} {
-                other.pages.clear();
+            VectorCache(VectorCache<T, page_offset_bits, page_index_bits>& other)=delete;
+            VectorCache(VectorCache<T, page_offset_bits, page_index_bits>&& other) noexcept : page_table {std::move(other.page_table)}, _size {other._size}, num_pages {other.num_pages} {
+                other.page_table.clear();
                 other._size = 0;
+                other.num_pages = 0;
             }
 
-            VectorCache<T, page_size_exponent>& operator=(VectorCache<T, page_size_exponent>& other)=delete;
-            VectorCache<T, page_size_exponent>& operator=(VectorCache<T, page_size_exponent>&& other) noexcept {
-                for (auto& page: pages) {
-                    delete page.start;
-                }
-                pages.clear();
-                pages.reserve(other.pages.size());
-                for (auto& slice : other.pages) {
-                    pages.template emplace_back(slice.start, slice.size);
-                }
-                _size = other._size;
-                other.pages.clear();
-                other._size = 0;
-                return *this;
-            }
-            VectorCache<T, page_size_exponent>& operator*() {return *this;}
-            VectorCache<T, page_size_exponent>* operator->() {return this;}
+            VectorCache<T, page_offset_bits, page_index_bits>& operator=(VectorCache<T, page_offset_bits, page_index_bits>& other)=delete;
+            VectorCache<T, page_offset_bits, page_index_bits>& operator=(VectorCache<T, page_offset_bits, page_index_bits>&& other)=delete;
+            VectorCache<T, page_offset_bits, page_index_bits>& operator*() {return *this;}
+            VectorCache<T, page_offset_bits, page_index_bits>* operator->() {return this;}
 
             void push_back(const T& item) noexcept {
-                std::size_t page_number_to_insert_to {(_size & page_number_bit_mask) >> page_size_exponent};
+                std::size_t page_number_to_insert_to {(_size & page_number_bit_mask) >> page_offset_bits};
                 std::size_t page_offset {_size & page_offset_bit_mask};
-                if (page_number_to_insert_to >= pages.size()) {
-                    allocate_new_page();
+                std::size_t page_table_entry {page_number_to_insert_to & page_table_entry_bit_mask};
+
+                // Page swap is needed
+                if (page_table[page_table_entry].page_number != page_number_to_insert_to || page_number_to_insert_to >= num_pages) {
+
+                    if (page_table[page_table_entry].valid) {
+                        saver(page_table[page_table_entry].slice, page_table[page_table_entry].page_number);
+                    }
+                    // New page needed
+                    if (page_number_to_insert_to >= num_pages) {
+                        T* new_page = new T[page_size];
+                        page_table[page_table_entry].slice.start = new_page;
+                        page_table[page_table_entry].slice.size = 0;
+                        num_pages++;
+                    } else {
+                        // Just a simple swap will suffice
+                        thesoup::types::Slice<T> slice {std::move(loader(page_number_to_insert_to).unwrap())};
+                        page_table[page_table_entry].slice.start = slice.start;
+                        page_table[page_table_entry].slice.size = slice.size;
+                        page_table[page_table_entry].page_number = page_number_to_insert_to;
+                    }
+
+                    page_table[page_table_entry].valid = true;
+                    page_table[page_table_entry].page_number = page_number_to_insert_to;
                 }
-                pages[page_number_to_insert_to].size++;
-                pages[page_number_to_insert_to][page_offset] = item;
+
+
+                page_table[page_table_entry].slice.size++;
+                page_table[page_table_entry].slice[page_offset] = item;
                 _size++;
             }
 
             T& operator[](const std::size_t idx) {
-                std::size_t page_num {idx & page_number_bit_mask};
+                if (idx >= _size) {
+                    std::stringstream ss;
+                    ss << "Array index out of bounds for VectorCache of size " << _size;
+                    throw std::out_of_range(ss.str());
+                }
+                std::size_t page_number {(idx & page_number_bit_mask) >> page_offset_bits};
                 std::size_t page_offset {idx & page_offset_bit_mask};
-                return pages[page_num].start[page_offset];
+                std::size_t page_table_entry {page_number & page_table_entry_bit_mask};
+
+                if(page_table[page_table_entry].page_number == page_number && page_table[page_table_entry].valid) {
+                    // Ideal case. Cache hit
+                    std::cout << "Cache hit for idx " << idx << "\n";
+
+                } else if(page_table[page_table_entry].page_number != page_number && page_table[page_table_entry].valid) {
+                    std::cout << "Cache miss for idx " << idx << " Swapping valid page for page number " << page_table[page_table_entry].page_number << "\n";
+
+                    // Some other valid page
+                    // TODO: Throw on save failure
+                    saver(page_table[page_table_entry].slice, page_table[page_table_entry].page_number);
+                    // TODO: Throw on load failure
+                    thesoup::types::Slice<T> slice {std::move(loader(page_number).unwrap())};
+                    page_table[page_table_entry].slice.start = slice.start;
+                    page_table[page_table_entry].slice.size = slice.size;
+                    page_table[page_table_entry].page_number = page_number;
+                } else {
+                    // Invalid page
+                    // TODO: Throw on load failure
+                    std::cout << "Cache miss fpr idx " << idx << ". Invalid page!\n";
+                    thesoup::types::Slice<T> slice {std::move(loader(page_number).unwrap())};
+                    page_table[page_table_entry].slice.start = slice.start;
+                    page_table[page_table_entry].slice.size = slice.size;
+                    page_table[page_table_entry].page_number = page_number;
+                    page_table[page_table_entry].valid = true;
+                }
+                std::cout << page_table[page_table_entry].slice.size << " === " << page_offset << " ---------------------------------- \n";
+                return page_table[page_table_entry].slice[page_offset];
             }
 
             std::size_t size() const noexcept {
@@ -110,20 +175,36 @@ namespace thesoup {
             }
 
             std::size_t bytes() const noexcept {
-                return pages.size() * page_size;
+                return num_pages * page_size * sizeof(T);
             }
 
             std::size_t num_partitions() const noexcept {
-                return pages.size();
+                return num_pages;
             }
 
-            thesoup::types::Slice<T> get_partition(const std::size_t partition_id) {
-                if (partition_id >= pages.size()) {
+            thesoup::types::Slice<T> get_partition(const std::size_t page_number) {
+                if (page_number >= num_pages) {
                     throw std::out_of_range("Partition absent.");
                 }
+                std::size_t page_table_entry {page_number & page_table_entry_bit_mask};
+
+                // Load page if needed
+                if (page_table[page_table_entry].page_number != page_number && page_table[page_table_entry].valid) {
+                    // TODO: Throw on save failure
+                    saver(page_table[page_table_entry].slice, page_table[page_table_entry].page_number);
+                    thesoup::types::Slice<T> slice {std::move(loader(page_number).unwrap())};
+                    page_table[page_table_entry].slice.start = slice.start;
+                    page_table[page_table_entry].slice.size = slice.size;
+                    page_table[page_table_entry].page_number = page_number;
+                } else if (!page_table[page_table_entry].valid) {
+                    thesoup::types::Slice<T> slice {std::move(loader(page_number).unwrap())};
+                    page_table[page_table_entry].slice.start = slice.start;
+                    page_table[page_table_entry].slice.size = slice.size;
+                    page_table[page_table_entry].page_number = page_number;
+                }
                 return Slice<T> {
-                    pages[partition_id].start,
-                    pages[partition_id].size
+                    page_table[page_table_entry].slice.start,
+                    page_table[page_table_entry].slice.size
                 };
             }
 
@@ -135,11 +216,11 @@ namespace thesoup {
                 using pointer           = T*;
                 using reference         = T&;
 
-                VectorCache<T, page_size_exponent>* enclosing;
+                VectorCache<T, page_offset_bits, page_index_bits>* enclosing;
                 std::size_t idx {};
 
                 Iterator(
-                        VectorCache<T, page_size_exponent>* enclosing,
+                        VectorCache<T, page_offset_bits, page_index_bits>* enclosing,
                         const std::size_t& idx) : enclosing {enclosing}, idx {idx} {}
 
                 reference operator*() noexcept {return (*enclosing)[idx];}
