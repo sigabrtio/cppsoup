@@ -1,11 +1,10 @@
 #define CATCH_CONFIG_MAIN
 
-#include <algorithm>
 #include <exception>
 #include <iterator>
 #include <unordered_map>
-#include <thesoup/types/vector.hpp>
-#include <thesoup/types/types.hpp>
+
+#include <thesoup/types/vector_cache.hpp>
 #include <catch2/catch_all.hpp>
 
 using thesoup::types::VectorCache;
@@ -65,7 +64,6 @@ SCENARIO("VectorCache happy case.") {
 
         WHEN("I insert some items in it.") {
 
-            std::cout << "Pushing (a,b,c)\n";
             my_vec.push_back({'a','b','c'});
 
             THEN("The idem should be index able.") {
@@ -82,13 +80,9 @@ SCENARIO("VectorCache happy case.") {
 
             AND_WHEN("I insert some more items.") {
 
-                std::cout << "Pushing (a,b,d)\n";
                 my_vec.push_back({'a','b','d'});
-                std::cout << "Pushing (a,b,e)\n";
                 my_vec.push_back({'a','b','e'});
-                std::cout << "Pushing (a,b,f)\n";
                 my_vec.push_back({'a','b','f'});
-                std::cout << "Pushing (a,b,g)\n";
                 my_vec.push_back({'a','b','g'});
 
 

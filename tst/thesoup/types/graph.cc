@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include <catch2/catch_all.hpp>
-#include <thesoup/types/graph.hpp>
+#include <thesoup/types/digraph.hpp>
 
 using thesoup::types::DirectedGraph;
 using thesoup::types::Edge;
