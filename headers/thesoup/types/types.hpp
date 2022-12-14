@@ -76,9 +76,7 @@ namespace thesoup {
              * */
             T& unwrap() {
                 if (is_error) {
-                    std::stringstream ss;
-                    ss << std::get<_Error>(store).err;
-                    throw std::runtime_error(ss.str());
+                    throw std::runtime_error("Unwrapping error.");
                 } else {
                     return std::get<T>(store);
                 }
@@ -86,9 +84,7 @@ namespace thesoup {
 
             const T& unwrap() const {
                 if (is_error) {
-                    std::stringstream ss;
-                    ss << std::get<_Error>(store).err;
-                    throw std::runtime_error(ss.str());
+                    throw std::runtime_error("Unwrapping error.");
                 } else {
                     return std::get<T>(store);
                 }
@@ -129,6 +125,10 @@ namespace thesoup {
                 return Result(std::forward<T>(val));
             }
 
+            static Result<T,E> success(const T& val) {
+                return Result(val);
+            }
+
             /**
              * \brief Return an `Result` object of failure type.
              *
@@ -141,6 +141,10 @@ namespace thesoup {
          */
             static Result<T,E> failure(E&& err) {
                 return Result(std::forward<E>(err), true);
+            }
+
+            static Result<T,E> failure(const E& err) {
+                return Result(err, true);
             }
         };
 

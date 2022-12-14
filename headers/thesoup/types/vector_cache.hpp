@@ -143,11 +143,7 @@ namespace thesoup {
 
                 if(page_table[page_table_entry].page_number == page_number && page_table[page_table_entry].valid) {
                     // Ideal case. Cache hit
-                    std::cout << "Cache hit for idx " << idx << "\n";
-
                 } else if(page_table[page_table_entry].page_number != page_number && page_table[page_table_entry].valid) {
-                    std::cout << "Cache miss for idx " << idx << " Swapping valid page for page number " << page_table[page_table_entry].page_number << "\n";
-
                     // Some other valid page
                     // TODO: Throw on save failure
                     saver(page_table[page_table_entry].slice, page_table[page_table_entry].page_number);
@@ -159,14 +155,12 @@ namespace thesoup {
                 } else {
                     // Invalid page
                     // TODO: Throw on load failure
-                    std::cout << "Cache miss fpr idx " << idx << ". Invalid page!\n";
                     thesoup::types::Slice<T> slice {std::move(loader(page_number).unwrap())};
                     page_table[page_table_entry].slice.start = slice.start;
                     page_table[page_table_entry].slice.size = slice.size;
                     page_table[page_table_entry].page_number = page_number;
                     page_table[page_table_entry].valid = true;
                 }
-                std::cout << page_table[page_table_entry].slice.size << " === " << page_offset << " ---------------------------------- \n";
                 return page_table[page_table_entry].slice[page_offset];
             }
 
