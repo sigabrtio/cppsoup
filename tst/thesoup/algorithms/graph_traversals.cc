@@ -1,71 +1,92 @@
 #define CATCH_CONFIG_MAIN
 
+#include <optional>
+#include <unordered_set>
+
 #include <catch2/catch_all.hpp>
 
+#include <thesoup/types/types.hpp>
 #include <thesoup/types/graph.hpp>
-#include <thesoup/types/indexedgraph.hpp>
+#include <thesoup/types/simplegraph.hpp>
 #include <thesoup/algorithms/graph_traversals.hpp>
 
-/*
+using thesoup::types::Unit;
 using thesoup::types::Edge;
-using thesoup::types::IndexedPropertyDiGraph;
+using thesoup::types::SimpleWeightedGraph;
+using thesoup::types::SimpleWeightedGraphAttributes::ErrorCode;
 using thesoup::algorithms::bfs;
 
-enum class EdgeType {
-    E1,
-    E2,
-    E3
-};
-
-namespace std {
-    template <> struct hash<EdgeType> {
-        std::size_t operator()(const EdgeType &e) const noexcept {
-            return hash<std::size_t>()(static_cast<std::size_t>(e));
-        }
-    };
-}
 SCENARIO("BFS") {
 
-    GIVEN("I have a di-graph") {
+    GIVEN("I have a di-graph without caring about weights.") {
 
-        IndexedPropertyDiGraph<int, EdgeType> my_graph;
+        SimpleWeightedGraph<char, Unit> my_graph;
 
         AND_GIVEN("I have filled it out with some nodes and edges") {
+            /*
+             *
+             * A --------->B--------->E
+             * |           |          |
+             * |           C--------->D
+             * |           |
+             * `---------->F
+             */
 
-            std::size_t v1_id {my_graph.insert_vertex(1)};
-            std::size_t v2_id {my_graph.insert_vertex(2)};
-            std::size_t v3_id {my_graph.insert_vertex(3)};
-            std::size_t v4_id {my_graph.insert_vertex(4)};
+            my_graph.insert_vertex('A');
+            my_graph.insert_vertex('B');
+            my_graph.insert_vertex('C');
+            my_graph.insert_vertex('D');
+            my_graph.insert_vertex('E');
+            my_graph.insert_vertex('F');
 
-            std::size_t e1_type_id {my_graph.register_edge(EdgeType::E1)};
-            std::size_t e2_type_id {my_graph.register_edge(EdgeType::E2)};
-            std::size_t e3_type_id {my_graph.register_edge_type(EdgeType::E3)};
-
-            my_graph.insert_edge({v1_id, e1_type_id, v2_id});
-
-            my_graph.insert_edge({1, EdgeType::E2, 2});
-
-            my_graph.insert_edge({1, EdgeType::E1, 3});
-            my_graph.insert_edge({1, EdgeType::E2, 3});
-
-            my_graph.insert_edge({2, EdgeType::E1, 3});
-            my_graph.insert_edge({2, EdgeType::E2, 3});
-
-            my_graph.insert_edge({3, EdgeType::E1, 4});
-            my_graph.insert_edge({3, EdgeType::E2, 4});
+            my_graph.insert_edge({'A', Unit::unit, 'B'});
+            my_graph.insert_edge({'A', Unit::unit, 'F'});
+            my_graph.insert_edge({'B', Unit::unit, 'E'});
+            my_graph.insert_edge({'B', Unit::unit, 'C'});
+            my_graph.insert_edge({'C', Unit::unit, 'D'});
+            my_graph.insert_edge({'C', Unit::unit, 'F'});
+            my_graph.insert_edge({'E', Unit::unit, 'D'});
 
             WHEN("I do a BFS on it.") {
 
-                std::set<int> visited;
-                auto visit_callback = [&](const int& _, const int& v) {
+                std::unordered_set<char> visited;
+                std::unordered_set<char> visited2;
+                std::function<void(const std::optional<char>&, const char&)> visit_callback = [&](const std::optional<char>& _, const char& v) {
                     (void)_;
                     visited.insert(v);
                 };
 
-                thesoup::types::Graph<int, EdgeType, DirectedGraph<int, EdgeType>> g = DirectedGraph<int, EdgeType> {};
-                bfs<int, EdgeType, DirectedGraph<int, EdgeType>>(g, 1, visit_callback);
+                std::function<void(const std::optional<char>&, const char&)> visit_callback_2 = [&](const std::optional<char>& _, const char& v) {
+                    (void)_;
+                    visited2.insert(v);
+                };
+
+                bfs(my_graph,'A', visit_callback).unwrap();
+                bfs(my_graph,'C', visit_callback_2).unwrap();
+
+                THEN("The I should have traversed all reachable vertices.") {
+
+                    std::unordered_set<char> expected_vertices {'A', 'B', 'C', 'D', 'E', 'F'};
+                    std::unordered_set<char> expected_vertices_2 {'C', 'D', 'F'};
+
+                    REQUIRE(expected_vertices == visited);
+                    REQUIRE(expected_vertices_2 == visited2);
+                }
+            }
+
+            AND_WHEN("I start a BFS with an incorrect node.") {
+
+                std::function<void(const std::optional<char>&, const char&)> visit_callback = [&](const std::optional<char>& _, const char& v) {
+                    (void)_;
+                    (void) v;
+                };
+                auto res {bfs(my_graph, 'Z', visit_callback)};
+
+                THEN("I should get the original error back from the underlying graph's get_neighbour method.") {
+
+                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res.error());
+                }
             }
         }
     }
 }
- */

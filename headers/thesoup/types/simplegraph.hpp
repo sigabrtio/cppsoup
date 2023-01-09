@@ -36,7 +36,7 @@ namespace thesoup {
 
         template<typename V_TYPE, typename WEIGHT_TYPE>
         class SimpleWeightedGraph
-                : public Graph<V_TYPE, WEIGHT_TYPE, SimpleWeightedGraphAttributes::ErrorCode, V_TYPE, WEIGHT_TYPE> {
+                : public Graph<SimpleWeightedGraph<V_TYPE, WEIGHT_TYPE>, V_TYPE, WEIGHT_TYPE, SimpleWeightedGraphAttributes::ErrorCode, V_TYPE, WEIGHT_TYPE> {
         private:
             std::unordered_map<V_TYPE, std::unordered_set<thesoup::types::Neighbour<V_TYPE, WEIGHT_TYPE>>> adj_list {};
             std::unordered_map<V_TYPE, unsigned long> incoming_edges_count {};

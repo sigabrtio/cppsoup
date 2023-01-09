@@ -64,7 +64,7 @@ namespace thesoup {
          */
         template<typename V_TYPE, typename E_TYPE>
         class IndexedPropertyDiGraph
-                : public Graph<V_TYPE, E_TYPE, IndexedPropertyDiGraphAttributes::ErrorCode, std::size_t, std::size_t> {
+                : public Graph<IndexedPropertyDiGraph<V_TYPE, E_TYPE>, V_TYPE, E_TYPE, IndexedPropertyDiGraphAttributes::ErrorCode, std::size_t, std::size_t> {
         private:
 
             struct _VertexRecord {

@@ -17,5 +17,5 @@ test('Types test', types_test)
 test('Vector test', vector_cache_test)
 test('Indexed graph test', indexed_graph_test)
 test('Simple graph test', simple_graph_test)
-#test('Graph traversals test', graph_traversals_test)
+test('Graph traversals test', graph_traversals_test)
 
