@@ -44,7 +44,7 @@ namespace thesoup {
             };
         }
 
-        /***
+        /**
          * \class IndexedPropertyGraph
          *
          * \brief A property graph type with indices into the vertices and edge types.
@@ -81,7 +81,7 @@ namespace thesoup {
 
 
         public:
-            /***
+            /**
              * \brief Register an edge.
              *
              * This method registers an edge type and returns an ID for the registered edge type. Subsequent additions of
@@ -128,7 +128,7 @@ namespace thesoup {
                         IndexedPropertyDiGraphAttributes::ErrorCode::TOO_MANY_DUPLICATE_IDS);
             }
 
-            /***
+            /**
              * \brief Add a vertex
              *
              * This method adds a vertex to the graph and returns an ID. The vertex does not necessarily have to be attached
@@ -171,7 +171,7 @@ namespace thesoup {
                         IndexedPropertyDiGraphAttributes::ErrorCode::TOO_MANY_DUPLICATE_IDS);
             }
 
-            /***
+            /**
              * \brief Delete a vertex
              *
              * This method accepts a vertex ID and delete the vertex both from the index and the graph. If the vertex
@@ -197,7 +197,7 @@ namespace thesoup {
                 }
             }
 
-            /***
+            /**
              * \brief Hydrate a vertex
              *
              * This method accepts a vertex ID and returns the corresponding actual vertex. If the vertex is absent, an
@@ -217,7 +217,7 @@ namespace thesoup {
                 }
             }
 
-            /***
+            /**
              * \brief Add an edge.
              *
              * This function takes an edge of type thesoup::types::Edge with the template parameters set to std::size_t.
@@ -244,7 +244,7 @@ namespace thesoup {
                 }
             }
 
-            /***
+            /**
              * \brief Delete an edge
              *
              * This method deletes an edge from the graph. NOTE: The edge type is not effected by this method. If the
@@ -283,7 +283,7 @@ namespace thesoup {
             }
 
 
-            /***
+            /**
              * \brief Hydrate an edge type
              *
              * This method accepts an edge type ID and returns the corresponding actual edge type. If the edge type is
@@ -303,7 +303,7 @@ namespace thesoup {
                 }
             }
 
-            /***
+            /**
              * \brief Get all neighbours of a vertex
              *
              * This method returns all neighbours of a vertex. The returned value is a list of type Neighbour<edge_type, vertex>.
@@ -329,7 +329,7 @@ namespace thesoup {
                 }
             }
 
-            /***
+            /**
              * \brief Return all neighbour of a vertex, attached by a given edge type
              *
              * This method returns all neighbours of a given vertex, who are attached by a certain edge type only. The
