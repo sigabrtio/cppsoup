@@ -39,6 +39,7 @@ namespace thesoup {
             static constexpr bool value {false};
         };
 
+        //!\cond NO_DOC
         template <typename V_TYPE, typename E_TYPE, typename E>
         struct IsEdgeOfType <
                 V_TYPE,
@@ -50,6 +51,7 @@ namespace thesoup {
         > {
             static constexpr bool value {true};
         };
+        //!\endcond
 
         template<class Child, typename V_TYPE, typename E_TYPE, typename ERR, typename VID_TYPE=V_TYPE, typename EID_TYPE=E_TYPE>
         class Graph {
@@ -82,7 +84,7 @@ namespace thesoup {
     }
 }
 
-
+//!\cond NO_DOC
 namespace std {
     template <typename VID_TYPE, typename EID_TYPE> struct hash<thesoup::types::Neighbour<VID_TYPE, EID_TYPE>> {
         std::size_t operator()(const thesoup::types::Neighbour<VID_TYPE, EID_TYPE>& n) const noexcept {
@@ -92,3 +94,4 @@ namespace std {
         }
     };
 }
+//!\endcond

@@ -203,6 +203,7 @@ namespace thesoup {
             }
 
             // TODO: Optimize ++ and -- operators at least
+            //!\cond NO_DOC
             struct Iterator {
                 using iterator_category [[maybe_unused]] = std::random_access_iterator_tag;
                 using difference_type   = std::ptrdiff_t;
@@ -236,6 +237,7 @@ namespace thesoup {
                 bool operator== (const Iterator& other) const noexcept { return enclosing == other.enclosing && idx == other.idx; };
                 bool operator!= (const Iterator& other) const noexcept { return enclosing != other.enclosing || idx != other.idx; };
             };
+            //!\endcond
 
             Iterator begin() noexcept {return Iterator(this, 0);}
             Iterator end() noexcept {return Iterator(this, _size);}
