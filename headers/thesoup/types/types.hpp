@@ -251,10 +251,28 @@ namespace thesoup {
         };
 
         /**
-         * TODO: Add doc
+        * \class IsTemplateSpecialization
+        *
+        * \brief Static asserter to see if a type is specialization of a template.
+        *
+        * \tparam T The derived type.
+        *
+        * \tparam U The original type.
+        *
+        * Sometimes there might be a situation where we need to static assert that a type derives from a certain template.
+        * In those situations, we will be able to use this struct. See example below. For a real like use case, observe
+        * thesoup::algorithms::kruskal .
+        *
+        * ```
+        * template <typename T> struct Base;
+        * using ChildInt = Base<int>;
+        *
+        * thesoup::types::IsTemplateSpecialization<ChildInt, Base>::value; // will be true
+        * thesoup::types::IsTemplateSpecialization<char, Base>::value; // will be false
+        * ```
          */
         template <class, template <class, class...> class>
-        struct IsInstance {
+        struct IsTemplateSpecialization {
             static constexpr bool value {false};
         };
 
@@ -279,7 +297,7 @@ namespace thesoup {
         };
 
         template <class... T, template <class, class...> class U>
-        struct IsInstance<U<T...>, U> {
+        struct IsTemplateSpecialization<U<T...>, U> {
             static constexpr bool value {true};
         };
         //!\endcond

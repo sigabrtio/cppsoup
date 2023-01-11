@@ -15,7 +15,7 @@ namespace thesoup {
         template <typename IterType>
         auto kruskal(const IterType& begin, const IterType& end) {
             using ValueType = typename std::iterator_traits<IterType>::value_type;
-            static_assert(thesoup::types::IsInstance<ValueType, thesoup::types::Edge>::value);
+            static_assert(thesoup::types::IsTemplateSpecialization<ValueType, thesoup::types::Edge>::value);
 
 
             using V_TYPE = decltype(ValueType::from);

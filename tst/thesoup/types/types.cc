@@ -8,6 +8,11 @@
 using thesoup::types::Result;
 using thesoup::types::Slice;
 using thesoup::types::IsForwardIteratorOfType;
+using thesoup::types::IsTemplateSpecialization;
+
+template <typename T> struct MyType {
+    T t1;
+};
 
 SCENARIO("Results test") {
 
@@ -153,3 +158,21 @@ SCENARIO("Forward iterator test") {
         }
     }
 }
+
+SCENARIO("Template specialization test") {
+
+    GIVEN("I have a template (defined above).") {
+
+        WHEN("I create a specialization.") {
+
+            using A = MyType<int>;
+
+            THEN("It should work") {
+
+                REQUIRE(IsTemplateSpecialization<A, MyType>::value);
+                REQUIRE_FALSE(IsTemplateSpecialization<int, MyType>::value);
+            }
+        }
+    }
+}
+
