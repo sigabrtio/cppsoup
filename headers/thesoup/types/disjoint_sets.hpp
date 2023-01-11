@@ -28,12 +28,14 @@ namespace thesoup {
                 ELEMENT_DOES_NOT_EXIST
             };
 
-            DisjointSets(const std::unordered_set<T>& starting_elements) {
+            template <typename IT> DisjointSets(const IT& begin, const IT& end) {
+                static_assert(thesoup::types::IsForwardIteratorOfType<IT, T>::value);
                 std::for_each(
-                        starting_elements.begin(),
-                        starting_elements.end(),
+                        begin,
+                        end,
                         [&](const T& item) {
                             sets.emplace(item, std::unordered_set<T>());
+                            sets.at(item).insert(item);
                             set_leaders.emplace(item, item);
                         });
             }
@@ -54,8 +56,9 @@ namespace thesoup {
                 if (set_leaders.find(elem1) == set_leaders.end() || set_leaders.find(elem2) == set_leaders.end()) {
                     return thesoup::types::Result<thesoup::types::Unit, ErrorCode>::failure(ErrorCode::ELEMENT_DOES_NOT_EXIST);
                 }
-                const T& sl1 {set_leaders.at(elem1)};
-                const T& sl2 {set_leaders.at(elem2)};
+                const T sl1 {set_leaders.at(elem1)};
+                const T sl2 {set_leaders.at(elem2)};
+
                 if (sl1 != sl2) {
                     sets.at(sl1).insert(sets.at(sl2).begin(), sets.at(sl2).end());
                     std::for_each(

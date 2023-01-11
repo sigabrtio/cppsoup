@@ -35,6 +35,22 @@ namespace thesoup {
             VID_TYPE to;
         };
 
+        template <typename V_TYPE,typename E_TYPE, typename E, typename=void> struct IsEdgeOfType {
+            static constexpr bool value {false};
+        };
+
+        template <typename V_TYPE, typename E_TYPE, typename E>
+        struct IsEdgeOfType <
+                V_TYPE,
+                E_TYPE,
+                E,
+                typename std::enable_if<
+                        std::is_same<typename thesoup::types::Edge<V_TYPE, E_TYPE>, E>::value
+                >::type
+        > {
+            static constexpr bool value {true};
+        };
+
         template<class Child, typename V_TYPE, typename E_TYPE, typename ERR, typename VID_TYPE=V_TYPE, typename EID_TYPE=E_TYPE>
         class Graph {
         public:

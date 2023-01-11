@@ -250,6 +250,15 @@ namespace thesoup {
             static constexpr bool value {false};
         };
 
+        /**
+         * TODO: Add doc
+         */
+        template <class, template <class, class...> class>
+        struct IsInstance {
+            static constexpr bool value {false};
+        };
+
+
         //!\cond NO_DOC
         template <typename It, typename T>
         struct IsForwardIteratorOfType<
@@ -268,6 +277,12 @@ namespace thesoup {
         >  {
             static constexpr bool value {true};
         };
+
+        template <class... T, template <class, class...> class U>
+        struct IsInstance<U<T...>, U> {
+            static constexpr bool value {true};
+        };
         //!\endcond
+
     }
 }

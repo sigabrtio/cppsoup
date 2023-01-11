@@ -13,7 +13,7 @@ SCENARIO("Disjoint sets test happy cases.") {
     GIVEN("I have a disjoint sets of characters.") {
 
         std::unordered_set<char> elems {'a', 'b', 'c', 'd'};
-        DisjointSets<char> ds {elems};
+        DisjointSets<char> ds {elems.begin(), elems.end()};
 
         WHEN(" I query the size.") {
 
@@ -47,10 +47,10 @@ SCENARIO("Disjoint sets test happy cases.") {
 
                         AND_THEN("The set leaders should have changed.") {
 
-                            REQUIRE_FALSE('a' == ds.get_set_leader('a'));
-                            REQUIRE_FALSE('a' == ds.get_set_leader('b'));
-                            REQUIRE_FALSE('c' == ds.get_set_leader('c'));
-                            REQUIRE_FALSE('c' == ds.get_set_leader('d'));
+                            REQUIRE('a' == ds.get_set_leader('a').unwrap());
+                            REQUIRE('a' == ds.get_set_leader('b').unwrap());
+                            REQUIRE('c' == ds.get_set_leader('c').unwrap());
+                            REQUIRE('c' == ds.get_set_leader('d').unwrap());
                         }
                     }
                 }
@@ -64,7 +64,7 @@ SCENARIO("Disjoint sets error cases.") {
     GIVEN("I have a disjoint sets of characters.") {
 
         std::unordered_set<char> elems{'a', 'b', 'c', 'd'};
-        DisjointSets<char> ds{elems};
+        DisjointSets<char> ds{elems.begin(), elems.end()};
 
         WHEN("I query set leader of non-existent element.") {
 

@@ -112,9 +112,9 @@ SCENARIO("Indexed property graph happy case with a office database.") {
                         REQUIRE(std::find(emp001_attributes.begin(), emp001_attributes.end(), Attribute {performance, good_performance}) != emp001_attributes.end());
 
                         REQUIRE(3 == emp002_attributes.size());
-                        REQUIRE(std::find(emp001_attributes.begin(), emp002_attributes.end(), Attribute {name, bob}) != emp002_attributes.end());
-                        REQUIRE(std::find(emp001_attributes.begin(), emp002_attributes.end(), Attribute {dept, clown}) != emp002_attributes.end());
-                        REQUIRE(std::find(emp001_attributes.begin(), emp002_attributes.end(), Attribute {performance, ok_performance}) != emp002_attributes.end());
+                        REQUIRE(std::find(emp002_attributes.begin(), emp002_attributes.end(), Attribute {name, bob}) != emp002_attributes.end());
+                        REQUIRE(std::find(emp002_attributes.begin(), emp002_attributes.end(), Attribute {dept, clown}) != emp002_attributes.end());
+                        REQUIRE(std::find(emp002_attributes.begin(), emp002_attributes.end(), Attribute {performance, ok_performance}) != emp002_attributes.end());
 
                     }
                 }
