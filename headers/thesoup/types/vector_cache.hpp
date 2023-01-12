@@ -21,6 +21,7 @@ namespace thesoup {
      * \brief Sub namespace with all numeric classes and functions.
      * */
     namespace types {
+        //!\cond NO_DOC
         struct PageOffsetBits {
             using type = std::size_t;
         };
@@ -28,6 +29,7 @@ namespace thesoup {
         struct PageIndexBits {
             using type = std::size_t;
         };
+        //!\endcond
 
         /**
          * \class VectorCache
