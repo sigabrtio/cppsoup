@@ -2,6 +2,7 @@
 
 #include <exception>
 #include <iterator>
+#include <iostream>
 #include <unordered_map>
 
 #include <thesoup/types/vector_cache.hpp>
@@ -77,7 +78,6 @@ SCENARIO("VectorCache happy case.") {
                 }
             }
 
-
             AND_WHEN("I insert some more items.") {
 
                 my_vec.push_back({'a','b','d'});
@@ -102,7 +102,6 @@ SCENARIO("VectorCache happy case.") {
             }
 
             AND_WHEN("I construct another vector from this one via a move.") {
-
                 auto other_vec {std::move(my_vec)};
 
                 THEN("The other vector should be properly initialized.") {
