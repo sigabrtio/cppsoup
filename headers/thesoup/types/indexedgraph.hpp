@@ -44,24 +44,24 @@ namespace thesoup {
             };
         }
 
-        /**
-         * \class IndexedPropertyGraph
-         *
-         * \brief A property graph type with indices into the vertices and edge types.
-         *
-         * This class implements the thesoup::types::Graph interface with some extra functionality, and using `std::size_t`
-         * as the `VID_TYPE` and `EID_TYPE`. This graph models vertices of type V_TYPE connected by "properties". A good
-         * use case id RDF graph, where the subject and object are vertices of V_TYPE and the predicate if of the type
-         * E_TYPE. Since in RDF graphs the predicates are highly repeated, we are better off "registering" a predicate once
-         * (using the register_edge_type method) and using the returned ID (std::size_t) again and again in the actual graph.
-         *
-         * Similarly for vertices, when we insert a vertex, an ID (std::size_t) is returned that then we use to construct
-         * the actual graph. Since we expose the IDs to the user, traversal operations and hydration can be decoupled,
-         * resulting in good performance opportunities.
-         *
-         * \tparam V_TYPE
-         * \tparam E_TYPE
-         */
+       /**
+        *
+        * \brief A property graph type with indices into the vertices and edge types.
+        *
+        * This class implements the thesoup::types::Graph interface with some extra functionality, and using `std::size_t`
+        * as the `VID_TYPE` and `EID_TYPE`. This graph models vertices of type V_TYPE connected by "properties". A good
+        * use case id RDF graph, where the subject and object are vertices of V_TYPE and the predicate if of the type
+        * E_TYPE. Since in RDF graphs the predicates are highly repeated, we are better off "registering" a predicate once
+        * (using the register_edge_type method) and using the returned ID (std::size_t) again and again in the actual graph.
+        *
+        * Similarly for vertices, when we insert a vertex, an ID (std::size_t) is returned that then we use to construct
+        * the actual graph. Since we expose the IDs to the user, traversal operations and hydration can be decoupled,
+        * resulting in good performance opportunities.
+        *
+        * \tparam V_TYPE The vertex type
+        * \tparam E_TYPE The edge type
+        *
+        */
         template<typename V_TYPE, typename E_TYPE>
         class IndexedPropertyDiGraph
                 : public Graph<IndexedPropertyDiGraph<V_TYPE, E_TYPE>, V_TYPE, E_TYPE, IndexedPropertyDiGraphAttributes::ErrorCode, std::size_t, std::size_t> {
