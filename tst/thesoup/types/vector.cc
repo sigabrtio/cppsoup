@@ -37,14 +37,21 @@ public:
         }
     }
 
-    Result<Slice<T>, int> load(const std::size_t& page_num) {
+    Result<Slice<T>, int> load(const std::size_t& page_num) const {
         if (store.find(page_num) != store.end()) {
-            return Result<Slice<T>, int>::success(Slice(store[page_num].start, store[page_num].size));
+            return Result<Slice<T>, int>::success(Slice(store.at(page_num).start, store.at(page_num).size));
         } else {
             return Result<Slice<T>, int>::failure(1);
         }
     }
 
+    std::size_t size() const noexcept {
+        return store.size();
+    }
+
+    auto begin() noexcept {
+        return store.begin();
+    }
 };
 
 SCENARIO("VectorCache happy case.") {
@@ -176,7 +183,6 @@ SCENARIO("VectorCache iterations.") {
     }
 }
 
-
 SCENARIO("Partitions test.") {
 
     GIVEN("I have a vector of type int.") {
@@ -237,6 +243,54 @@ SCENARIO("Partitions test.") {
                 THEN("It should throw an error.") {
 
                     REQUIRE_THROWS_AS(my_vec.get_partition(2), std::out_of_range);
+                }
+            }
+        }
+    }
+}
+
+SCENARIO("Swap test.") {
+
+    GIVEN("I have an in memory database and a vector cache with a 2-bit offset and a 2-bit index.") {
+
+        InMemDB<int> database;
+        auto saver = [&](const Slice<int>& slice, const std::size_t& page_num) {
+            database.save(slice, page_num);
+            return Result<bool, int>::success(true);
+        };
+        auto loader = [&](const std::size_t page_num) {return database.load(page_num);};
+
+        constexpr std::size_t offset_bits {2};
+        constexpr std::size_t index_bits {3};
+        VectorCache<int, offset_bits, index_bits> test_vector {saver, loader};
+
+        WHEN("I fill it to the in-memory capacity.") {
+
+            std::size_t num_pages_allowed {1<<index_bits};
+            std::size_t entries_per_page {1<<offset_bits};
+            std::size_t total_capacity {num_pages_allowed * entries_per_page};
+
+            for (std::size_t i = 0; i < total_capacity; i++) {
+                test_vector.push_back(i);
+            }
+
+            THEN("The external database should be empty at this point.") {
+                REQUIRE(0 == database.size());
+
+                AND_WHEN("I add another item to the vector.") {
+
+                    test_vector.push_back(100);
+
+                    THEN("By my calculation, the first page should have been swapped out.") {
+
+                        REQUIRE(1 == database.size());
+                        const auto& [page_num, items] {*(database.begin())};
+                        REQUIRE(0 == page_num);
+                        REQUIRE(4 == items.size);
+                        for (std::size_t i = 0; i < 4; i++) {
+                            REQUIRE(static_cast<int>(i) == items[i]);
+                        }
+                    }
                 }
             }
         }

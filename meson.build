@@ -8,7 +8,7 @@ project(
     'werror=True'
   ])
 
-add_global_arguments('--std=c++17', language : 'cpp')
+add_global_arguments('--std=c++20', language : 'cpp')
 
 #Dependencies
 catch = dependency('catch2-with-main')
