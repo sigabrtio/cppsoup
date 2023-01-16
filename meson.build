@@ -1,7 +1,7 @@
 project(
   'cppsoup',
   'cpp',
-  version : '0.0.1',
+  version : '0.1.0',
   license : 'GPLV2',
   default_options:[
     'warning_level=3',
@@ -22,7 +22,7 @@ subdir('tst')
 pkg = import('pkgconfig')
 pkg.generate(
     subdirs : 'headers/thesoup',
-    version : '0.0.2',
+    version : '0.1.0',
     name : 'thesoup',
     filebase : 'thesoup',
     description : 'A variety of c++ utilities.'
