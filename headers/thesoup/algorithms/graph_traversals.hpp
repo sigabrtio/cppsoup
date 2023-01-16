@@ -5,11 +5,40 @@
 #include <thesoup/types/types.hpp>
 #include <thesoup/types/graph.hpp>
 
-
+/**
+ * \namespace thesoup
+ *
+ * \brief The root namespace.
+ * */
 namespace thesoup {
 
+    /**
+     * \namespace thesoup::algorithms
+     *
+     * \brief Sub namespace with all algorithms.
+     * */
     namespace algorithms {
 
+        /**
+         * \brief Implement the bfs graph traversal method.
+         *
+         * This function implements a BFS algorithm on an input graph. On each visit, a user defined function is called with
+         * the parent-child pair.
+         *
+         * TODO: Implement setting of max level and a filter function for neighbours.
+         *
+         * \tparam Impl - The Impl parameter for the thesoup::types::Graph argument. Don't worry about this. This will be inferred from the argument.
+         * \tparam V_TYPE - The V_TYPE parameter for the thesoup::types::Graph argument. Don't worry about this. This will be inferred from the argument.
+         * \tparam E_TYPE - The E_TYPE parameter for the thesoup::types::Graph argument. Don't worry about this. This will be inferred from the argument.
+         * \tparam ERR - The ERR parameter for the thesoup::types::Graph argument. Don't worry about this. This will be inferred from the argument.
+         * \tparam VID_TYPE - The VID_TYPE parameter for the thesoup::types::Graph argument. Don't worry about this. This will be inferred from the argument.
+         * \tparam EID_TYPE - The EID_TYPE parameter for the thesoup::types::Graph argument. Don't worry about this. This will be inferred from the argument.
+         *
+         * \param graph - The input graph (CRTP specialization of thesoup::types::Graph).
+         * \param start - The starting point of the traversal.
+         * \param visit_callback - The callback method to call on each node. It is called with (parent_node, child_node) args. If there is no parent (starting node), std::nullopt is passed.
+         * \return Void
+         */
         template<class Impl, typename V_TYPE, typename E_TYPE, typename ERR, typename VID_TYPE=V_TYPE, typename EID_TYPE=E_TYPE>
         thesoup::types::Result<thesoup::types::Unit, ERR> bfs(
                 const thesoup::types::Graph<Impl, V_TYPE, E_TYPE, ERR, VID_TYPE, EID_TYPE>& graph,
