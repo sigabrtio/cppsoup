@@ -24,12 +24,12 @@ namespace thesoup {
      * */
     namespace types {
         // TODO: Re-evaluate this approach
-        bool operator<(const thesoup::types::Neighbour<std::size_t, std::size_t> &left,
+        template <typename T> bool operator<(const thesoup::types::Neighbour<T, T> &left,
                        const thesoup::types::Neighbour<std::size_t, std::size_t> &right) {
             return left.vertex < right.vertex;
         }
 
-        bool operator==(const thesoup::types::Neighbour<std::size_t, std::size_t> &left,
+        template <typename T> bool operator==(const thesoup::types::Neighbour<T, T> &left,
                         const thesoup::types::Neighbour<std::size_t, std::size_t> &right) {
             return left.vertex == right.vertex && left.edge == right.edge;
         }
