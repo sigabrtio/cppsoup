@@ -119,6 +119,21 @@ SCENARIO("Indexed property graph happy case with a office database.") {
                     }
                 }
 
+                AND_WHEN("I query all incoming edges.") {
+
+                    std::vector<Neighbour<std::size_t, std::size_t>> name_amartya_incoming_edges {database.get_incoming_edges(amartya).unwrap()};
+                    std::vector<Neighbour<std::size_t, std::size_t>> dept_incoming_edges {database.get_incoming_edges(engineering).unwrap()};
+
+                    THEN("The correct neighbours should be returned.") {
+
+                        REQUIRE(1 == name_amartya_incoming_edges.size());
+                        REQUIRE(std::find(name_amartya_incoming_edges.begin(), name_amartya_incoming_edges.end(), Attribute {name, emp001}) != name_amartya_incoming_edges.end());
+
+                        REQUIRE(1 == dept_incoming_edges.size());
+                        REQUIRE(std::find(dept_incoming_edges.begin(), dept_incoming_edges.end(), Attribute {dept, emp001}) != dept_incoming_edges.end());
+                    }
+                }
+
                 AND_WHEN("I query by a certain neighbour.") {
 
                     std::vector<std::size_t> emp001_name {database.get_neighbours(emp001, name).unwrap()};
@@ -135,6 +150,17 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
                         REQUIRE(1 == emp001_perf.size());
                         REQUIRE(good_performance == emp001_perf[0]);
+                    }
+                }
+
+                AND_WHEN("I query incoming edges by a certain neighbour.") {
+
+                    std::vector<std::size_t> amartya_name {database.get_incoming_edges(amartya, name).unwrap()};
+
+                    THEN("I should get the ID of the correct attribute.") {
+
+                        REQUIRE(1 == amartya_name.size());
+                        REQUIRE(emp001 == amartya_name[0]);
                     }
                 }
 
@@ -186,6 +212,7 @@ SCENARIO("Indexed property graph happy case with a office database.") {
     }
 }
 
+// TODO: Categorize failure cases": query failures, insert failures and delete failures.
 SCENARIO("Indexed property graph failure cases with a office database.") {
 
     GIVEN("I have a indexed property graph where vertices are string and edges are of type `EdgeType`.") {
@@ -256,7 +283,6 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
             std::size_t name {database.register_edge_type(EdgeType::NAME).unwrap()};
             std::size_t emp001 {database.insert_vertex("emp001").unwrap()};
 
-
             AND_WHEN("I try to delete an edge connecting non-existent vertices.") {
 
                 auto res1 {database.delete_edge({emp001+1, name, emp001+2})};
@@ -286,6 +312,28 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
                     THEN("I should get an error.") {
 
                         REQUIRE(ErrorCode::NON_EXISTENT_EDGE == res.error());
+                    }
+                }
+
+                AND_WHEN("I query non existent neigbours.") {
+
+                    auto res {database.get_neighbours(emp001, is)};
+
+                    THEN("I should get an empty list and no error.") {
+
+                        REQUIRE(res);
+                        REQUIRE(0 == res.unwrap().size());
+                    }
+                }
+
+                AND_WHEN("I query non existent backward neigbours.") {
+
+                    auto res {database.get_incoming_edges(amartya, is)};
+
+                    THEN("I should get an empty list and no error.") {
+
+                        REQUIRE(res);
+                        REQUIRE(0 == res.unwrap().size());
                     }
                 }
 

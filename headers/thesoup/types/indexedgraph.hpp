@@ -40,7 +40,8 @@ namespace thesoup {
                 NON_EXISTENT_VERTEX,
                 NON_EXISTENT_EDGE,
                 INVALID_EDGE_TYPE,
-                CONNECTED_VERTEX
+                CONNECTED_VERTEX,
+                BROKEN_EDGE
             };
         }
 
@@ -65,19 +66,22 @@ namespace thesoup {
         template<typename V_TYPE, typename E_TYPE>
         class IndexedPropertyDiGraph
                 : public Graph<IndexedPropertyDiGraph<V_TYPE, E_TYPE>, V_TYPE, E_TYPE, IndexedPropertyDiGraphAttributes::ErrorCode, std::size_t, std::size_t> {
-        private:
 
+        private:
+            // Encapsulates both the incoming and outgoing edges.
+            // The point of maintaining incoming edges count is tp enable advanced queries  and deletion operations.
+            struct _Edges {
+                std::set<Neighbour<std::size_t, std::size_t>> outgoing_edges {};
+                std::set<Neighbour<std::size_t, std::size_t>> incoming_edges {};
+            };
             struct _VertexRecord {
                 // This struct encapsulates a vertex and all the housekeeping information needed.
                 V_TYPE vertex;
-                // The incoming edges count is needed for some operations like deleting a vertex.
-                // While the outgoing edges count is easily determined from the graph, the incoming edges is not. Hence,
-                // we save it here.
                 unsigned long incoming_edges;
             };
-            std::unordered_map<std::size_t, _VertexRecord> vertex_index{};
+            std::unordered_map<std::size_t, V_TYPE> vertex_index{};
             std::unordered_map<std::size_t, E_TYPE> edge_index{};
-            std::unordered_map<std::size_t, std::set<Neighbour<std::size_t, std::size_t>>> adj_list{};
+            std::unordered_map<std::size_t, _Edges> adj_list{};
 
 
         public:
@@ -157,9 +161,9 @@ namespace thesoup {
                     auto hash1{std::hash<V_TYPE>()(vertex)};
                     id = hash1 ^ (attempt_id + (hash1 << 6) + (hash1 >> 2) + 0x9e3779b9);
                     if (vertex_index.find(id) == vertex_index.end()) {
-                        vertex_index[id] = {vertex, 0};
-                        adj_list[id];
-                    } else if (vertex_index.at(id).vertex == vertex) {
+                        vertex_index.emplace(id, vertex);
+                        adj_list.emplace(id, _Edges{});
+                    } else if (vertex_index.at(id) == vertex) {
                         return thesoup::types::Result<std::size_t, IndexedPropertyDiGraphAttributes::ErrorCode>::success(
                                 id);
                     } else {
@@ -186,7 +190,7 @@ namespace thesoup {
                 if (adj_list.find(vertex) == adj_list.end()) {
                     return thesoup::types::Result<thesoup::types::Unit, IndexedPropertyDiGraphAttributes::ErrorCode>::failure(
                             IndexedPropertyDiGraphAttributes::ErrorCode::NON_EXISTENT_VERTEX);
-                } else if (adj_list.at(vertex).size() > 0 || vertex_index.at(vertex).incoming_edges > 0) {
+                } else if (adj_list.at(vertex).incoming_edges.size() > 0 || adj_list.at(vertex).outgoing_edges.size() > 0) {
                     return thesoup::types::Result<thesoup::types::Unit, IndexedPropertyDiGraphAttributes::ErrorCode>::failure(
                             IndexedPropertyDiGraphAttributes::ErrorCode::CONNECTED_VERTEX);
                 } else {
@@ -213,7 +217,7 @@ namespace thesoup {
                             IndexedPropertyDiGraphAttributes::ErrorCode::NON_EXISTENT_VERTEX);
                 } else {
                     return thesoup::types::Result<const V_TYPE, IndexedPropertyDiGraphAttributes::ErrorCode>::success(
-                            vertex_index.at(vertex_id).vertex);
+                            vertex_index.at(vertex_id));
                 }
             }
 
@@ -237,8 +241,8 @@ namespace thesoup {
                     return thesoup::types::Result<thesoup::types::Unit, IndexedPropertyDiGraphAttributes::ErrorCode>::failure(
                             IndexedPropertyDiGraphAttributes::ErrorCode::INVALID_EDGE_TYPE);
                 } else {
-                    adj_list.at(edge.from).insert({edge.edge_type, edge.to});
-                    vertex_index.at(edge.to).incoming_edges++;
+                    adj_list.at(edge.from).outgoing_edges.insert({edge.edge_type, edge.to});
+                    adj_list.at(edge.to).incoming_edges.insert({edge.edge_type, edge.from});
                     return thesoup::types::Result<thesoup::types::Unit, IndexedPropertyDiGraphAttributes::ErrorCode>::success(
                             thesoup::types::Unit::unit);
                 }
@@ -267,14 +271,20 @@ namespace thesoup {
                     return thesoup::types::Result<thesoup::types::Unit, IndexedPropertyDiGraphAttributes::ErrorCode>::failure(
                             IndexedPropertyDiGraphAttributes::ErrorCode::INVALID_EDGE_TYPE);
                 } else {
-                    auto it{adj_list.at(from_id).find({edge_type_id, to_id})};
-                    if (it == adj_list.at(from_id).end()) {
+                    auto it {adj_list.at(from_id).outgoing_edges.find({edge_type_id, to_id})};
+                    auto it_back {adj_list.at(to_id).incoming_edges.find({edge_type_id, from_id})};
+                    if (it == adj_list.at(from_id).outgoing_edges.end() && it_back == adj_list.at(to_id).incoming_edges.end()) {
                         return thesoup::types::Result < thesoup::types::Unit,
                                 IndexedPropertyDiGraphAttributes::ErrorCode > ::failure(
                                         IndexedPropertyDiGraphAttributes::ErrorCode::NON_EXISTENT_EDGE);
+                    } else if (it_back == adj_list.at(to_id).incoming_edges.end() || it == adj_list.at(to_id).outgoing_edges.end()) {
+                        // TODO: See if we can return more meaningful error
+                        return thesoup::types::Result < thesoup::types::Unit,
+                                IndexedPropertyDiGraphAttributes::ErrorCode > ::failure(
+                                IndexedPropertyDiGraphAttributes::ErrorCode::BROKEN_EDGE);
                     } else {
-                        adj_list.at(from_id).erase(it);
-                        vertex_index.at(to_id).incoming_edges--;
+                        adj_list.at(from_id).outgoing_edges.erase(it);
+                        adj_list.at(to_id).incoming_edges.erase(it_back);
                         return thesoup::types::Result < thesoup::types::Unit,
                                 IndexedPropertyDiGraphAttributes::ErrorCode > ::success(
                                         thesoup::types::Unit::unit);
@@ -322,8 +332,8 @@ namespace thesoup {
                             IndexedPropertyDiGraphAttributes::ErrorCode::NON_EXISTENT_VERTEX);
                 } else {
                     std::vector<thesoup::types::Neighbour<std::size_t, std::size_t>> neighbours{};
-                    neighbours.reserve(adj_list.at(vertex).size());
-                    std::copy(adj_list.at(vertex).begin(), adj_list.at(vertex).end(), std::back_inserter(neighbours));
+                    neighbours.reserve(adj_list.at(vertex).outgoing_edges.size());
+                    std::copy(adj_list.at(vertex).outgoing_edges.begin(), adj_list.at(vertex).outgoing_edges.end(), std::back_inserter(neighbours));
                     return thesoup::types::Result<std::vector<thesoup::types::Neighbour<std::size_t, std::size_t>>, IndexedPropertyDiGraphAttributes::ErrorCode>::success(
                             neighbours);
                 }
@@ -352,7 +362,67 @@ namespace thesoup {
                 } else {
                     std::vector<std::size_t> neighbours;
                     // TODO: Move to c++20 filter when available
-                    for (const auto &neighbour: adj_list.at(vertex)) {
+                    for (const auto &neighbour: adj_list.at(vertex).outgoing_edges) {
+                        if (neighbour.edge == edge_type) {
+                            neighbours.push_back(neighbour.vertex);
+                        }
+                    }
+                    return thesoup::types::Result<std::vector<std::size_t>, IndexedPropertyDiGraphAttributes::ErrorCode>::success(
+                            neighbours);
+                }
+            }
+
+            /**
+             * \brief Get all incoming neighbours of a vertex
+             *
+             * This method returns all incoming edges to a vertex. The returned value is a list of type Neighbour<edge_type, vertex>.
+             * Just like the `get_neighbours` method, this allows us to keep information about what neighbour is attached
+             * to this vertex by what type of edge, but in the incoming direction. This is helpful for querying by object
+             * in a property graph. This function can be used with const objects of the class.
+             *
+             * If the vertex is not present, an error code is returned.
+             *
+             * \param vertex The vertex whose neighbours to return
+             * \return Result<List<Neighbour<vertex ID, edge type ID>>
+             */
+            thesoup::types::Result<std::vector<thesoup::types::Neighbour<std::size_t, std::size_t>>, IndexedPropertyDiGraphAttributes::ErrorCode>
+            get_incoming_edges(const std::size_t &vertex) const noexcept {
+                if (vertex_index.find(vertex) == vertex_index.end()) {
+                    return thesoup::types::Result<std::vector<thesoup::types::Neighbour<std::size_t, std::size_t>>, IndexedPropertyDiGraphAttributes::ErrorCode>::failure(
+                            IndexedPropertyDiGraphAttributes::ErrorCode::NON_EXISTENT_VERTEX);
+                } else {
+                    std::vector<thesoup::types::Neighbour<std::size_t, std::size_t>> neighbours{};
+                    neighbours.reserve(adj_list.at(vertex).incoming_edges.size());
+                    std::copy(adj_list.at(vertex).incoming_edges.begin(), adj_list.at(vertex).incoming_edges.end(), std::back_inserter(neighbours));
+                    return thesoup::types::Result<std::vector<thesoup::types::Neighbour<std::size_t, std::size_t>>, IndexedPropertyDiGraphAttributes::ErrorCode>::success(
+                            neighbours);
+                }
+            }
+
+            /**
+             * \brief Return all incoming neighbour of a vertex, attached by a given edge type
+             *
+             * This method returns all incoming neighbours of a given vertex, who are attached by a certain edge type only. The
+             * returned value is a list of vertex IDs. This function can be used with const objects of the class.
+             *
+             * If a vertex is absent of the edge type is not registered, an error code is returned.
+             *
+             * @param vertex
+             * @param edge_type
+             * @return
+             */
+            thesoup::types::Result<std::vector<std::size_t>, IndexedPropertyDiGraphAttributes::ErrorCode>
+            get_incoming_edges(const std::size_t &vertex, const std::size_t &edge_type) {
+                if (vertex_index.find(vertex) == vertex_index.end()) {
+                    return thesoup::types::Result<std::vector<std::size_t>, IndexedPropertyDiGraphAttributes::ErrorCode>::failure(
+                            IndexedPropertyDiGraphAttributes::ErrorCode::NON_EXISTENT_VERTEX);
+                } else if (edge_index.find(edge_type) == edge_index.end()) {
+                    return thesoup::types::Result<std::vector<std::size_t>, IndexedPropertyDiGraphAttributes::ErrorCode>::failure(
+                            IndexedPropertyDiGraphAttributes::ErrorCode::INVALID_EDGE_TYPE);
+                } else {
+                    std::vector<std::size_t> neighbours;
+                    // TODO: Move to c++20 filter when available
+                    for (const auto &neighbour: adj_list.at(vertex).incoming_edges) {
                         if (neighbour.edge == edge_type) {
                             neighbours.push_back(neighbour.vertex);
                         }
