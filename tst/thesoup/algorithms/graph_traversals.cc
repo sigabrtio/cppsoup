@@ -61,8 +61,8 @@ SCENARIO("BFS") {
                     visited2.insert(v);
                 };
 
-                bfs(my_graph,'A', visit_callback).unwrap();
-                bfs(my_graph,'C', visit_callback_2).unwrap();
+                bfs(my_graph,'A', visit_callback).get().unwrap();
+                bfs(my_graph,'C', visit_callback_2).get().unwrap();
 
                 THEN("The I should have traversed all reachable vertices.") {
 
@@ -84,7 +84,7 @@ SCENARIO("BFS") {
 
                 THEN("I should get the original error back from the underlying graph's get_neighbour method.") {
 
-                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res.error());
+                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res.get().error());
                 }
             }
         }

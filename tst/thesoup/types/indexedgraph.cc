@@ -35,23 +35,23 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
         WHEN("I register the edges, and insert some vertices.") {
 
-            std::size_t name {database.register_edge_type(EdgeType::NAME).unwrap()};
-            std::size_t dept {database.register_edge_type(EdgeType::DEPT).unwrap()};
-            std::size_t performance {database.register_edge_type(EdgeType::PERFORMANCE).unwrap()};
+            std::size_t name {database.register_edge_type(EdgeType::NAME).get().unwrap()};
+            std::size_t dept {database.register_edge_type(EdgeType::DEPT).get().unwrap()};
+            std::size_t performance {database.register_edge_type(EdgeType::PERFORMANCE).get().unwrap()};
 
-            std::size_t emp001 {database.insert_vertex(std::string("emp001")).unwrap()};
-            std::size_t amartya {database.insert_vertex(std::string("Amartya")).unwrap()};
-            std::size_t engineering {database.insert_vertex(std::string("Engineering")).unwrap()};
-            std::size_t good_performance {database.insert_vertex(std::string("A+")).unwrap()};
+            std::size_t emp001 {database.insert_vertex(std::string("emp001")).get().unwrap()};
+            std::size_t amartya {database.insert_vertex(std::string("Amartya")).get().unwrap()};
+            std::size_t engineering {database.insert_vertex(std::string("Engineering")).get().unwrap()};
+            std::size_t good_performance {database.insert_vertex(std::string("A+")).get().unwrap()};
 
-            std::size_t emp002 {database.insert_vertex(std::string("emp002")).unwrap()};
-            std::size_t bob {database.insert_vertex(std::string("Bob")).unwrap()};
-            std::size_t clown {database.insert_vertex(std::string("Clown")).unwrap()};
-            std::size_t ok_performance {database.insert_vertex(std::string("B+")).unwrap()};
+            std::size_t emp002 {database.insert_vertex(std::string("emp002")).get().unwrap()};
+            std::size_t bob {database.insert_vertex(std::string("Bob")).get().unwrap()};
+            std::size_t clown {database.insert_vertex(std::string("Clown")).get().unwrap()};
+            std::size_t ok_performance {database.insert_vertex(std::string("B+")).get().unwrap()};
 
             AND_WHEN("I try to register the same edge again.") {
 
-                std::size_t name2 {database.register_edge_type(EdgeType::NAME).unwrap()};
+                std::size_t name2 {database.register_edge_type(EdgeType::NAME).get().unwrap()};
 
                 THEN("It should be a no op.") {
 
@@ -61,7 +61,7 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
             AND_WHEN("I try to insert the same vertex again.") {
 
-                std::size_t emp001_2 {database.insert_vertex(std::string("emp001")).unwrap()};
+                std::size_t emp001_2 {database.insert_vertex(std::string("emp001")).get().unwrap()};
 
                 THEN("It should be a no-op") {
 
@@ -71,7 +71,7 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
             AND_WHEN("I hydrate some vertices.") {
 
-                std::string emp001_str {database.hydrate_vertex(emp001).unwrap()};
+                std::string emp001_str {database.hydrate_vertex(emp001).get().unwrap()};
 
                 THEN("I should get back the correct vertex.") {
 
@@ -81,7 +81,7 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
             AND_WHEN("I try to hydrate an edge type.") {
 
-                EdgeType name_edge {database.hydrate_edge_type(name).unwrap()};
+                EdgeType name_edge {database.hydrate_edge_type(name).get().unwrap()};
 
                 THEN("I should be able to do so.") {
 
@@ -91,18 +91,18 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
             AND_WHEN("I connect the vertices in the form of a database.") {
 
-                database.insert_edge({emp001, name, amartya}).unwrap();
-                database.insert_edge({emp001, dept, engineering}).unwrap();
-                database.insert_edge({emp001, performance, good_performance}).unwrap();
+                database.insert_edge({emp001, name, amartya}).get().unwrap();
+                database.insert_edge({emp001, dept, engineering}).get().unwrap();
+                database.insert_edge({emp001, performance, good_performance}).get().unwrap();
 
-                database.insert_edge({emp002, name, bob}).unwrap();
-                database.insert_edge({emp002, dept, clown}).unwrap();
-                database.insert_edge({emp002, performance, ok_performance}).unwrap();
+                database.insert_edge({emp002, name, bob}).get().unwrap();
+                database.insert_edge({emp002, dept, clown}).get().unwrap();
+                database.insert_edge({emp002, performance, ok_performance}).get().unwrap();
 
                 AND_WHEN("I query all neighbours.") {
 
-                    std::vector<Neighbour<std::size_t, std::size_t>> emp001_attributes {database.get_neighbours(emp001).unwrap()};
-                    std::vector<Neighbour<std::size_t, std::size_t>> emp002_attributes {database.get_neighbours(emp002).unwrap()};
+                    std::vector<Neighbour<std::size_t, std::size_t>> emp001_attributes {database.get_neighbours(emp001).get().unwrap()};
+                    std::vector<Neighbour<std::size_t, std::size_t>> emp002_attributes {database.get_neighbours(emp002).get().unwrap()};
 
                     THEN("The correct neighbours should be returned.") {
 
@@ -121,8 +121,8 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
                 AND_WHEN("I query all incoming edges.") {
 
-                    std::vector<Neighbour<std::size_t, std::size_t>> name_amartya_incoming_edges {database.get_incoming_edges(amartya).unwrap()};
-                    std::vector<Neighbour<std::size_t, std::size_t>> dept_incoming_edges {database.get_incoming_edges(engineering).unwrap()};
+                    std::vector<Neighbour<std::size_t, std::size_t>> name_amartya_incoming_edges {database.get_incoming_edges(amartya).get().unwrap()};
+                    std::vector<Neighbour<std::size_t, std::size_t>> dept_incoming_edges {database.get_incoming_edges(engineering).get().unwrap()};
 
                     THEN("The correct neighbours should be returned.") {
 
@@ -136,9 +136,9 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
                 AND_WHEN("I query by a certain neighbour.") {
 
-                    std::vector<std::size_t> emp001_name {database.get_neighbours(emp001, name).unwrap()};
-                    std::vector<std::size_t> emp001_dept {database.get_neighbours(emp001, dept).unwrap()};
-                    std::vector<std::size_t> emp001_perf {database.get_neighbours(emp001, performance).unwrap()};
+                    std::vector<std::size_t> emp001_name {database.get_neighbours(emp001, name).get().unwrap()};
+                    std::vector<std::size_t> emp001_dept {database.get_neighbours(emp001, dept).get().unwrap()};
+                    std::vector<std::size_t> emp001_perf {database.get_neighbours(emp001, performance).get().unwrap()};
 
                     THEN("I should get the ID of the correct attribute.") {
 
@@ -155,7 +155,7 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
                 AND_WHEN("I query incoming edges by a certain neighbour.") {
 
-                    std::vector<std::size_t> amartya_name {database.get_incoming_edges(amartya, name).unwrap()};
+                    std::vector<std::size_t> amartya_name {database.get_incoming_edges(amartya, name).get().unwrap()};
 
                     THEN("I should get the ID of the correct attribute.") {
 
@@ -166,8 +166,8 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
                 AND_WHEN("I try to delete an edge.") {
 
-                    auto res {database.delete_edge({emp001, name, amartya})};
-                    std::vector<Attribute> neighbours {database.get_neighbours(emp001, name)};
+                    auto res {database.delete_edge({emp001, name, amartya}).get()};
+                    std::vector<Attribute> neighbours {database.get_neighbours(emp001, name).get()};
 
                     THEN("I should be able to do so.") {
 
@@ -179,15 +179,15 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
             AND_WHEN("I insert a solo vertex.") {
 
-                std::size_t solo {database.insert_vertex("solo").unwrap()};
+                std::size_t solo {database.insert_vertex("solo").get().unwrap()};
 
                 THEN("I should be successfully able to delete it.") {
 
-                    REQUIRE(database.delete_vertex(solo));
+                    REQUIRE(database.delete_vertex(solo).get());
 
                     AND_WHEN("I try to hydrate it.") {
 
-                        auto res {database.hydrate_vertex(solo)};
+                        auto res {database.hydrate_vertex(solo).get()};
 
                         THEN("I should not be able to do it") {
 
@@ -198,7 +198,7 @@ SCENARIO("Indexed property graph happy case with a office database.") {
 
                     AND_WHEN("I try to re-delete it.") {
 
-                        auto res {database.delete_vertex(solo)};
+                        auto res {database.delete_vertex(solo).get()};
 
                         THEN("I should not be able to do it") {
 
@@ -221,13 +221,13 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
 
         WHEN("I register the edges.") {
 
-            std::size_t name {database.register_edge_type(EdgeType::NAME).unwrap()};
+            std::size_t name {database.register_edge_type(EdgeType::NAME).get().unwrap()};
 
             AND_WHEN("I try to insert an edge connecting non-existent vertices.") {
 
                 THEN("The operation should fail.") {
 
-                    auto fail{database.insert_edge({0, name, 1})};
+                    auto fail{database.insert_edge({0, name, 1}).get()};
                     REQUIRE_FALSE(fail);
                     REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == fail.error());
                 }
@@ -235,22 +235,22 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
 
             AND_WHEN("I insert 1 vertex and try to insert an edge.") {
 
-                std::size_t emp001 {database.insert_vertex(std::string("emp001")).unwrap()};
+                std::size_t emp001 {database.insert_vertex(std::string("emp001")).get().unwrap()};
 
                 THEN("It should still fail.") {
 
-                    auto fail{database.insert_edge({emp001, name, emp001+1})};
+                    auto fail{database.insert_edge({emp001, name, emp001+1}).get()};
                     REQUIRE_FALSE(fail);
                     REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == fail.error());
                 }
 
                 AND_WHEN("I insert more vertices and an edge and attempt to query by incorrect edge type.") {
 
-                    std::size_t amartya {database.insert_vertex(std::string("Amartya")).unwrap()};
-                    database.insert_edge({emp001, name, amartya}).unwrap();
+                    std::size_t amartya {database.insert_vertex(std::string("Amartya")).get().unwrap()};
+                    database.insert_edge({emp001, name, amartya}).get().unwrap();
 
                     THEN("The operation should fail.") {
-                        auto fail{database.get_neighbours(emp001, name + 1)};
+                        auto fail{database.get_neighbours(emp001, name + 1).get()};
                         REQUIRE_FALSE(fail);
                         REQUIRE(ErrorCode::INVALID_EDGE_TYPE == fail.error());
                     }
@@ -260,7 +260,7 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
 
         WHEN("I try to hydrate a non-existent vertex.") {
 
-            auto res {database.hydrate_vertex(0)};
+            auto res {database.hydrate_vertex(0).get()};
 
             THEN("I should get an error.") {
 
@@ -270,7 +270,7 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
 
         WHEN("I try to hydrate a non existent edge type.") {
 
-            auto res {database.hydrate_edge_type(0)};
+            auto res {database.hydrate_edge_type(0).get()};
 
             THEN("I should get an error.") {
 
@@ -280,8 +280,8 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
 
         WHEN("I register an edge type.") {
 
-            std::size_t name {database.register_edge_type(EdgeType::NAME).unwrap()};
-            std::size_t emp001 {database.insert_vertex("emp001").unwrap()};
+            std::size_t name {database.register_edge_type(EdgeType::NAME).get().unwrap()};
+            std::size_t emp001 {database.insert_vertex("emp001").get().unwrap()};
 
             AND_WHEN("I try to delete an edge connecting non-existent vertices.") {
 
@@ -291,23 +291,23 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
 
                 THEN("I should get an error.") {
 
-                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res1.error());
-                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res2.error());
-                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res3.error());
+                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res1.get().error());
+                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res2.get().error());
+                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res3.get().error());
                 }
             }
 
             AND_WHEN("we insert an actual edge.") {
 
-                std::size_t is {database.register_edge_type(EdgeType::IS).unwrap()};
-                std::size_t fat {database.insert_vertex("fat").unwrap()};
-                std::size_t amartya {database.insert_vertex("amartya").unwrap()};
+                std::size_t is {database.register_edge_type(EdgeType::IS).get().unwrap()};
+                std::size_t fat {database.insert_vertex("fat").get().unwrap()};
+                std::size_t amartya {database.insert_vertex("amartya").get().unwrap()};
 
                 database.insert_edge({emp001, name, amartya});
 
                 AND_WHEN("We try to delete an edge between actual vertices, but unconnected.") {
 
-                    auto res {database.delete_edge({amartya, is, fat})};
+                    auto res {database.delete_edge({amartya, is, fat}).get()};
 
                     THEN("I should get an error.") {
 
@@ -317,7 +317,7 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
 
                 AND_WHEN("I query non existent neigbours.") {
 
-                    auto res {database.get_neighbours(emp001, is)};
+                    auto res {database.get_neighbours(emp001, is).get()};
 
                     THEN("I should get an empty list and no error.") {
 
@@ -328,7 +328,7 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
 
                 AND_WHEN("I query non existent backward neigbours.") {
 
-                    auto res {database.get_incoming_edges(amartya, is)};
+                    auto res {database.get_incoming_edges(amartya, is).get()};
 
                     THEN("I should get an empty list and no error.") {
 
@@ -339,7 +339,7 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
 
                 AND_WHEN("We try to delete a vertex that has an outgoing edge.") {
 
-                    auto res {database.delete_vertex(emp001)};
+                    auto res {database.delete_vertex(emp001).get()};
 
                     THEN("I should get an error.") {
 
@@ -349,7 +349,7 @@ SCENARIO("Indexed property graph failure cases with a office database.") {
 
                 AND_WHEN("We try to delete a vertex that has an incoming edge.") {
 
-                    auto res {database.delete_vertex(amartya)};
+                    auto res {database.delete_vertex(amartya).get()};
 
                     THEN("I should get an error.") {
 

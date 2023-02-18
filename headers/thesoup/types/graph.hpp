@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <future>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -132,27 +133,33 @@ namespace thesoup {
         template<class Child, typename V_TYPE, typename E_TYPE, typename ERR, typename VID_TYPE=V_TYPE, typename EID_TYPE=E_TYPE>
         class Graph {
         public:
-            thesoup::types::Result<std::vector<Neighbour<VID_TYPE, EID_TYPE>>, ERR> get_neighbours(const VID_TYPE& vertex) const noexcept {
+            std::future<thesoup::types::Result<std::vector<Neighbour<VID_TYPE, EID_TYPE>>, ERR>>
+            get_neighbours(const VID_TYPE& vertex) const noexcept {
                 return static_cast<const Child*>(this)->get_neighbours(vertex);
             }
 
-            thesoup::types::Result<std::vector<VID_TYPE>, ERR> get_neighbours(const VID_TYPE& vertex, const EID_TYPE& edge_type) const noexcept{
+            std::future<thesoup::types::Result<std::vector<VID_TYPE>, ERR>>
+            get_neighbours(const VID_TYPE& vertex, const EID_TYPE& edge_type) const noexcept{
                 return static_cast<const Child*>(this)->get_neighbours(vertex, edge_type);
             }
 
-            thesoup::types::Result<VID_TYPE, ERR> insert_vertex(const V_TYPE& vertex) noexcept {
+            std::future<thesoup::types::Result<VID_TYPE, ERR>>
+            insert_vertex(const V_TYPE& vertex) noexcept {
                 return static_cast<Child*>(this)->insert_vertex(vertex);
             }
 
-            thesoup::types::Result<thesoup::types::Unit, ERR> insert_edge(const Edge<VID_TYPE, EID_TYPE>& edge) noexcept {
+            std::future<thesoup::types::Result<thesoup::types::Unit, ERR>>
+                insert_edge(const Edge<VID_TYPE, EID_TYPE>& edge) noexcept {
                 return static_cast<Child*>(this)->insert_edge(edge);
             }
 
-            thesoup::types::Result<thesoup::types::Unit, ERR> delete_vertex(const VID_TYPE& vertex) noexcept {
+            std::future<thesoup::types::Result<thesoup::types::Unit, ERR>>
+            delete_vertex(const VID_TYPE& vertex) noexcept {
                 return static_cast<Child*>(this)->delete_vertex(vertex);
             }
 
-            thesoup::types::Result<thesoup::types::Unit, ERR> delete_edge(const Edge<VID_TYPE, EID_TYPE>& edge) noexcept {
+            std::future<thesoup::types::Result<thesoup::types::Unit, ERR>>
+            delete_edge(const Edge<VID_TYPE, EID_TYPE>& edge) noexcept {
                 return static_cast<Child*>(this)->delete_edge(edge);
             }
         };

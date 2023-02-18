@@ -1,9 +1,11 @@
 #include <functional>
+#include <future>
 #include <optional>
 #include <unordered_set>
 
 #include <thesoup/types/types.hpp>
 #include <thesoup/types/graph.hpp>
+#include <thesoup/algorithms/utils.hpp>
 
 /**
  * \namespace thesoup
@@ -40,7 +42,8 @@ namespace thesoup {
          * \return Void
          */
         template<class Impl, typename V_TYPE, typename E_TYPE, typename ERR, typename VID_TYPE=V_TYPE, typename EID_TYPE=E_TYPE>
-        thesoup::types::Result<thesoup::types::Unit, ERR> bfs(
+        std::future<thesoup::types::Result<thesoup::types::Unit, ERR>>
+        bfs(
                 const thesoup::types::Graph<Impl, V_TYPE, E_TYPE, ERR, VID_TYPE, EID_TYPE>& graph,
                 const V_TYPE& start,
                 std::function<void(const std::optional<V_TYPE>&, const V_TYPE&)> visit_callback
@@ -56,9 +59,10 @@ namespace thesoup {
 
             while (frontier.size() > 0) {
                 for (const auto& u : frontier) {
-                    auto res {graph.get_neighbours(u)};
+                    auto res {graph.get_neighbours(u).get()};
                     if (!res) {
-                        return thesoup::types::Result<thesoup::types::Unit, ERR>::failure(res.error());
+                        return thesoup::async::make_ready_future(
+                                thesoup::types::Result<thesoup::types::Unit, ERR>::failure(res.error()));
                     }
                     for(const auto&n : res.unwrap()) {
                         const auto& v = n.vertex;
@@ -72,7 +76,7 @@ namespace thesoup {
                 frontier.swap(next_frontier);
                 next_frontier.clear();
             }
-            return thesoup::types::Result<thesoup::types::Unit, ERR>::success(thesoup::types::Unit::unit);
+            return thesoup::async::make_ready_future(thesoup::types::Result<thesoup::types::Unit, ERR>::success(thesoup::types::Unit::unit));
         }
     }
 }

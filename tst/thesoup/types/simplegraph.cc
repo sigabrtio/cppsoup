@@ -54,10 +54,10 @@ SCENARIO("Simple graph happy case") {
 
             AND_WHEN("I query the neighbours") {
 
-                auto n_set_a {graph.get_neighbours('A').unwrap()};
-                auto n_set_b {graph.get_neighbours('B').unwrap()};
-                auto n_set_c {graph.get_neighbours('C').unwrap()};
-                auto n_set_d {graph.get_neighbours('D').unwrap()};
+                auto n_set_a {graph.get_neighbours('A').get().unwrap()};
+                auto n_set_b {graph.get_neighbours('B').get().unwrap()};
+                auto n_set_c {graph.get_neighbours('C').get().unwrap()};
+                auto n_set_d {graph.get_neighbours('D').get().unwrap()};
 
                 THEN("I should get back the correct ones.") {
 
@@ -70,10 +70,10 @@ SCENARIO("Simple graph happy case") {
 
             AND_WHEN("I query the neighbours by weight") {
 
-                auto n_set_a5 {graph.get_neighbours('A', 5).unwrap()};
-                auto n_set_a1 {graph.get_neighbours('A', 1).unwrap()};
-                auto n_set_b2 {graph.get_neighbours('B', 2).unwrap()};
-                auto n_set_b1 {graph.get_neighbours('B', 1).unwrap()};
+                auto n_set_a5 {graph.get_neighbours('A', 5).get().unwrap()};
+                auto n_set_a1 {graph.get_neighbours('A', 1).get().unwrap()};
+                auto n_set_b2 {graph.get_neighbours('B', 2).get().unwrap()};
+                auto n_set_b1 {graph.get_neighbours('B', 1).get().unwrap()};
 
                 THEN("I should get back the correct ones.") {
 
@@ -91,7 +91,7 @@ SCENARIO("Simple graph happy case") {
 
                 THEN("That neighbour should be deleted.") {
 
-                    std::vector<Neighbour<char, float>> neighbours {graph.get_neighbours('A')};
+                    std::vector<Neighbour<char, float>> neighbours {graph.get_neighbours('A').get()};
                     REQUIRE(1 == neighbours.size());
                     REQUIRE(std::find(neighbours.begin(), neighbours.end(),  Neighbour<char, float> {5.0f, 'D'}) == neighbours.end());
                 }
@@ -105,11 +105,11 @@ SCENARIO("Simple graph happy case") {
 
             THEN("The operation should succeed.") {
 
-                REQUIRE(res);
+                REQUIRE(res.get());
 
                 AND_THEN("That vertex should truly be gone.") {
 
-                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == graph.get_neighbours('Z').error());
+                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == graph.get_neighbours('Z').get().error());
                 }
             }
         }
@@ -150,13 +150,13 @@ SCENARIO("Simple weighted graph failure scenarios.") {
 
                 THEN("I should get an error.") {
 
-                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res.error());
+                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res.get().error());
                 }
             }
 
             AND_WHEN("I query neighbours with incorrect weight.") {
 
-                std::vector<char> neighbours {graph.get_neighbours('A', 10.0f).unwrap()};
+                std::vector<char> neighbours {graph.get_neighbours('A', 10.0f).get().unwrap()};
 
                 THEN("I should get an empty list.") {
 
@@ -170,7 +170,7 @@ SCENARIO("Simple weighted graph failure scenarios.") {
 
                 THEN("I should get an error.") {
 
-                    REQUIRE(ErrorCode::CONNECTED_VERTEX == res.error());
+                    REQUIRE(ErrorCode::CONNECTED_VERTEX == res.get().error());
                 }
             }
 
@@ -180,7 +180,7 @@ SCENARIO("Simple weighted graph failure scenarios.") {
 
                 THEN("I should get an error.") {
 
-                    REQUIRE(ErrorCode::CONNECTED_VERTEX == res.error());
+                    REQUIRE(ErrorCode::CONNECTED_VERTEX == res.get().error());
 
                     AND_WHEN("I delete the edges pointing to it.") {
 
@@ -190,7 +190,7 @@ SCENARIO("Simple weighted graph failure scenarios.") {
 
                         THEN("I should be able to delete the vertex.") {
 
-                            REQUIRE(graph.delete_vertex('D'));
+                            REQUIRE(graph.delete_vertex('D').get());
                         }
                     }
                 }
@@ -204,9 +204,9 @@ SCENARIO("Simple weighted graph failure scenarios.") {
 
                 THEN("I should get an error.") {
 
-                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res1.error());
-                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res2.error());
-                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res3.error());
+                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res1.get().error());
+                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res2.get().error());
+                    REQUIRE(ErrorCode::NON_EXISTENT_VERTEX == res3.get().error());
                 }
             }
 
@@ -216,7 +216,7 @@ SCENARIO("Simple weighted graph failure scenarios.") {
 
                 THEN("I should get an error.") {
 
-                    REQUIRE(ErrorCode::NON_EXISTENT_EDGE == res.error());
+                    REQUIRE(ErrorCode::NON_EXISTENT_EDGE == res.get().error());
                 }
             }
         }
