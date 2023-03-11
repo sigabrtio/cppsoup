@@ -24,6 +24,9 @@ kruskal_test = executable('kruskal_test', 'thesoup/algorithms/kruskal.cc',
 utils_test = executable('utils_test', 'thesoup/algorithms/utils.cc',
                     include_directories : [inc, test_utils_headers], dependencies: [catch])
 
+round_robin_threadpool_test = executable('simple_thread_pool_test', 'thesoup/async/round_robin_threadpool.cc',
+                    include_directories : [inc, test_utils_headers], dependencies: [catch])
+
 test('Types test', types_test)
 test('Vector test', vector_cache_test)
 test('Indexed graph test', indexed_graph_test)
@@ -32,4 +35,5 @@ test('Graph traversals test', graph_traversals_test)
 test('Disjoint sets test', disjoint_sets_test)
 test('Kruskal test', kruskal_test)
 test('Utils test', utils_test)
+test('Round robin thread-pool test', round_robin_threadpool_test)
 
