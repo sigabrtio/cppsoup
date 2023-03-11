@@ -1,23 +1,30 @@
 #pragma once
 
-#include <chrono>
 #include <future>
-#include <functional>
-#include <vector>
 
-/**
- * \namespace thesoup
- *
- * \brief The root namespace.
- * */
 namespace thesoup {
 
-    /**
-     * \namespace thesoup::async
-     *
-     * \brief Sub namespace some async utilities.
-     * */
     namespace async {
+
+        template<typename T>
+        std::future<T> make_ready_future(const T &val) {
+            std::promise<T> promise;
+            std::future<T> fut{promise.get_future()};
+            promise.set_value(val);
+            return fut;
+        }
+
+        template<typename T, typename E>
+        std::future<T> make_bad_future(const E &exception) {
+            std::promise<T> promise;
+            std::future<T> fut{promise.get_future()};
+            promise.set_exception(std::make_exception_ptr(exception));
+            return fut;
+        }
+
+        template <typename T> bool is_ready(const std::future<T>& fut) {
+            return fut.wait_for(std::chrono::seconds(0));
+        }
 
         template<typename T>
         class FutureComposer {
@@ -65,26 +72,6 @@ namespace thesoup {
                         }
                         return results;
                     });
-        }
-
-        template<typename T>
-        std::future<T> make_ready_future(const T &val) {
-            std::promise<T> promise;
-            std::future<T> fut{promise.get_future()};
-            promise.set_value(val);
-            return fut;
-        }
-
-        template<typename T, typename E>
-        std::future<T> make_bad_future(const E &exception) {
-            std::promise<T> promise;
-            std::future<T> fut{promise.get_future()};
-            promise.set_exception(std::make_exception_ptr(exception));
-            return fut;
-        }
-
-        template <typename T> bool is_ready(const std::future<T>& fut) {
-            return fut.wait_for(std::chrono::seconds(0));
         }
     }
 }

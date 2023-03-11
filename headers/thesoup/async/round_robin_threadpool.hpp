@@ -5,7 +5,7 @@
 #include <mutex>
 #include <list>
 
-#include <thesoup/async/models.hpp>
+#include <thesoup/async/types.hpp>
 
 namespace thesoup {
 
@@ -42,7 +42,6 @@ namespace thesoup {
                         handle.destroy();
                         it = handles.erase(it);
                         num_open_tasks--;
-                        std::cout << "NUM OPEN TASKS = " << num_open_tasks << "\n";
                     } else {
                         handle.resume();
                         it++;

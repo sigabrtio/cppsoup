@@ -4,7 +4,7 @@
 
 #include <catch2/catch_all.hpp>
 
-#include <thesoup/async/models.hpp>
+#include <thesoup/async/types.hpp>
 #include <thesoup/async/round_robin_threadpool.hpp>
 #include <thesoup/types/types.hpp>
 

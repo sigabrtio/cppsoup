@@ -8,9 +8,9 @@
 #include <set>
 #include <unordered_map>
 
+#include <thesoup/async/functions.hpp>
 #include <thesoup/types/graph.hpp>
 #include <thesoup/types/types.hpp>
-#include <thesoup/algorithms/utils.hpp>
 
 /**
  * \namespace thesoup
