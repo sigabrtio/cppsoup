@@ -18,13 +18,22 @@ namespace thesoup {
             std::mutex lock;
 
         public:
-            void schedule(std::coroutine_handle<>&& handle) {
+            void schedule(std::coroutine_handle<>&& handle) noexcept {
                 std::lock_guard<std::mutex> guard {lock};
                 handles.push_back(handle);
                 num_open_tasks++;
             }
 
-            void step() {
+            std::future<void> start() noexcept {
+                return std::async(
+                        [&]() {
+                            while (true) {
+                                step();
+                            }
+                        });
+            }
+
+            void step() noexcept {
                 std::lock_guard<std::mutex> guard {lock};
                 auto it {handles.begin()};
                 while(it != handles.end()) {

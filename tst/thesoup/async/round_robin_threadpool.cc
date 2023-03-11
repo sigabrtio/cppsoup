@@ -1,5 +1,7 @@
 #define CATCH_CONFIG_MAIN
 
+#include <exception>
+
 #include <catch2/catch_all.hpp>
 
 #include <thesoup/async/models.hpp>
@@ -17,6 +19,21 @@ SingleValueCoroTask<int, RoundRobinCoroExecutor> my_routine(
     std::ignore = _;
     int acc {0};
     for (int i = start_val; i < 10; i++) {
+        acc++;
+        co_await Unit::unit;
+    }
+    co_return acc;
+};
+
+SingleValueCoroTask<int, RoundRobinCoroExecutor> my_throwable_routine(
+        RoundRobinCoroExecutor* _,
+        bool should_throw) {
+    std::ignore = _;
+    int acc {0};
+    if (should_throw) {
+        throw std::runtime_error("error");
+    }
+    for (int i = 0; i < 10; i++) {
         acc++;
         co_await Unit::unit;
     }
@@ -95,6 +112,36 @@ SCENARIO("Round robin executor test") {
                             REQUIRE((10-4) == task3.future.get());
                             REQUIRE((10-2) == task4.future.get());
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+SCENARIO("Coroutine throws exceptions.") {
+
+    GIVEN("I have a round robin coroutine executor.") {
+
+        RoundRobinCoroExecutor executor{};
+
+        WHEN("I have some coroutines, and one of them throws.") {
+
+            auto task_1 {my_throwable_routine(&executor, false)};
+            auto task_2 {my_throwable_routine(&executor, true)};
+
+            AND_WHEN("I have finished all tasks in my executor.") {
+
+                while (executor.size() > 0) {
+                    executor.step();
+                }
+
+                AND_WHEN("I access the results") {
+
+                    THEN("1 of them should be error.") {
+
+                        REQUIRE(10 == task_1.future.get());
+                        REQUIRE_THROWS_AS(task_2.future.get(), std::runtime_error);
                     }
                 }
             }

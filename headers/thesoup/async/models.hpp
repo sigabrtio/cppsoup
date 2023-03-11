@@ -16,7 +16,7 @@ namespace thesoup {
 
         template <class Impl> class CoroExecutorInterface {
         public:
-            void schedule(std::coroutine_handle<>&& handle) {
+            void schedule(std::coroutine_handle<>&& handle) noexcept {
                 static_cast<Impl*>(this)->schedule(std::forward<std::coroutine_handle<>&&>(handle));
             }
         };
