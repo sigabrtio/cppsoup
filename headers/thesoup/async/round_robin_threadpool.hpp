@@ -2,6 +2,7 @@
 
 #include <coroutine>
 #include <iterator>
+#include <iostream>
 #include <mutex>
 #include <list>
 
@@ -37,13 +38,12 @@ namespace thesoup {
                 std::lock_guard<std::mutex> guard {lock};
                 auto it {handles.begin()};
                 while(it != handles.end()) {
-                    auto handle = *it;
-                    if (handle.done()) {
-                        handle.destroy();
+                    if (it->done()) {
+                        it->destroy();
                         it = handles.erase(it);
                         num_open_tasks--;
                     } else {
-                        handle.resume();
+                        it->resume();
                         it++;
                     }
                 }

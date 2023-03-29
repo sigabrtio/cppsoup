@@ -7,16 +7,17 @@
 #include <thesoup/async/types.hpp>
 #include <thesoup/async/round_robin_threadpool.hpp>
 #include <thesoup/types/types.hpp>
+#include <thesoup/async/functions.hpp>
 
 using thesoup::async::RoundRobinCoroExecutor;
 using thesoup::async::SingleValueCoroTask;
 using thesoup::async::is_ready;
 using thesoup::types::Unit;
 
-SingleValueCoroTask<int, RoundRobinCoroExecutor> my_routine(
-        RoundRobinCoroExecutor* _,
+SingleValueCoroTask<const int, RoundRobinCoroExecutor> my_routine(
+        std::reference_wrapper<RoundRobinCoroExecutor> executor,
         const int start_val) {
-    std::ignore = _;
+    co_await executor;
     int acc {0};
     for (int i = start_val; i < 10; i++) {
         acc++;
@@ -26,9 +27,9 @@ SingleValueCoroTask<int, RoundRobinCoroExecutor> my_routine(
 };
 
 SingleValueCoroTask<int, RoundRobinCoroExecutor> my_throwable_routine(
-        RoundRobinCoroExecutor* _,
+        std::reference_wrapper<RoundRobinCoroExecutor> executor,
         bool should_throw) {
-    std::ignore = _;
+    co_await executor;
     int acc {0};
     if (should_throw) {
         throw std::runtime_error("error");
@@ -48,10 +49,10 @@ SCENARIO("Round robin executor test") {
 
         AND_GIVEN("I have a some coroutines that does some trivial things in a loop.") {
 
-            auto task1 {my_routine(&executor, 8)};
-            auto task2 {my_routine(&executor, 6)};
-            auto task3 {my_routine(&executor, 4)};
-            auto task4 {my_routine(&executor, 2)};
+            auto task1 {my_routine(executor, 8)};
+            auto task2 {my_routine(executor, 6)};
+            auto task3 {my_routine(executor, 4)};
+            auto task4 {my_routine(executor, 2)};
 
             WHEN("I test the size of my queue.") {
 
@@ -127,8 +128,8 @@ SCENARIO("Coroutine throws exceptions.") {
 
         WHEN("I have some coroutines, and one of them throws.") {
 
-            auto task_1 {my_throwable_routine(&executor, false)};
-            auto task_2 {my_throwable_routine(&executor, true)};
+            auto task_1 {my_throwable_routine(executor, false)};
+            auto task_2 {my_throwable_routine(executor, true)};
 
             AND_WHEN("I have finished all tasks in my executor.") {
 

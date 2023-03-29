@@ -3,15 +3,13 @@
 #include <coroutine>
 #include <future>
 
+#include <iostream>
+
 #include <thesoup/types/types.hpp>
 
 namespace thesoup {
 
     namespace async {
-        template <typename T> bool is_ready(const std::future<T>& fut) {
-            return fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
-        }
-
         template <class Impl> class CoroExecutorInterface {
         public:
             void schedule(std::coroutine_handle<>&& handle) noexcept {
@@ -21,21 +19,27 @@ namespace thesoup {
 
         template <typename T, class ExecutorImpl> struct [[nodiscard]] SingleValueCoroTask {
             struct promise_type {
-                CoroExecutorInterface<ExecutorImpl>* executor_handle;
+                std::coroutine_handle<promise_type> handle {};
                 std::promise<T> promise {};
 
-                promise_type(CoroExecutorInterface<ExecutorImpl>* executor_handle, ...) : executor_handle {executor_handle} {}
+                promise_type() {}
+                promise_type(promise_type&& other) : handle {std::move(other.handle)}, promise {std::move(other.promise)} {}
+                promise_type(const promise_type& other)=delete;
 
                 SingleValueCoroTask get_return_object() {
                     std::coroutine_handle<promise_type> handle {std::coroutine_handle<promise_type>::from_promise(*this)};
-                    executor_handle->schedule(handle);
+                    this->handle = handle;
                     return SingleValueCoroTask {
                             .future = promise.get_future()
                     };
                 }
 
-                std::suspend_always initial_suspend() const noexcept {return {};}
+                std::suspend_never initial_suspend() const noexcept {return {};}
                 std::suspend_always await_transform(const thesoup::types::Unit _) const noexcept {std::ignore = _; return {};}
+                std::suspend_always await_transform(std::reference_wrapper<CoroExecutorInterface<ExecutorImpl>> executor_handle) {
+                    executor_handle.get().schedule(std::move(handle));
+                    return {};
+                }
                 std::suspend_always final_suspend() const noexcept {return {};}
 
                 void return_value(const T& ret_val) noexcept {
