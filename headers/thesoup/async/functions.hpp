@@ -35,40 +35,6 @@ namespace thesoup {
             return fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
         }
 
-        /*template<typename T>
-        class FutureComposer {
-        private:
-            std::future<T> fut;
-        public:
-            FutureComposer(T &&fut) : fut{fut} {}
-
-            std::future<T> future() {
-                return std::move(fut);
-            }
-
-            template<typename Transformed>
-            FutureComposer<Transformed> map(const std::function<Transformed(const T &)> &function) {
-                return FutureComposer{
-                        std::async(
-                                std::launch::deferred,
-                                [&]() {
-                                    function(fut.get());
-                                })
-                };
-            }
-
-            template<typename Transformed>
-            FutureComposer flat_map(const std::function<std::future<Transformed>(const T &)> &function) {
-                return FutureComposer{
-                        std::async(
-                                std::launch::deferred,
-                                [&]() {
-                                    function(fut.get());
-                                })
-                };
-            }
-        };*/
-
         template<typename T>
         std::future<std::vector<T>> collect_futures(std::vector<std::future<T>> &futures) {
             return std::async(
@@ -86,7 +52,8 @@ namespace thesoup {
         template <typename T, typename U, class ExecutorImpl>
         SingleValueCoroTask<U, ExecutorImpl> map_coroutine(
                 std::reference_wrapper<CoroExecutorInterface<ExecutorImpl>> executor,
-                std::future<T> input_fut, const typename std::function<U(const T&)> function) {
+                std::future<T> input_fut,
+                const typename std::function<U(const T&)> function) {
             co_await executor;
             while (!is_ready(input_fut)) {
                 co_await thesoup::types::Unit::unit;
@@ -108,6 +75,43 @@ namespace thesoup {
                 co_await thesoup::types::Unit::unit;
             }
             co_return next_fut.get();
+        }
+
+        template <typename T, typename U, class ExecutorImpl>
+        SingleValueCoroTask<std::tuple<T, U>, ExecutorImpl> join_coroutine(
+                std::reference_wrapper<CoroExecutorInterface<ExecutorImpl>> executor,
+                std::future<T> input_fut_left,
+                std::future<U> input_fut_right) {
+            co_await executor;
+            while(!is_ready(input_fut_left)) {
+                co_await thesoup::types::Unit::unit;
+            }
+            while(!is_ready(input_fut_right)) {
+                co_await thesoup::types::Unit::unit;
+            }
+            co_return std::make_tuple(
+                    input_fut_left.get(),
+                    input_fut_right.get());
+        }
+
+        template <typename T, class ExecutorImpl, typename InputIterType, typename OutputIterType>
+        SingleValueCoroTask<thesoup::types::Unit, ExecutorImpl> collect_coroutine(
+                std::reference_wrapper<CoroExecutorInterface<ExecutorImpl>> executor,
+                InputIterType begin,
+                InputIterType end,
+                OutputIterType dest) {
+            static_assert(thesoup::types::IsForwardIteratorOfType<InputIterType, std::future<T>>::value, "Expect a forward iterator of type std::future<T> for input.");
+            static_assert(thesoup::types::IsOutputIteratorOfType<OutputIterType, T>::value, "Expect a output iterator of type T for output.");
+
+            co_await executor;
+            for (auto it = begin; it < end; it++) {
+                while (!is_ready(*it)) {
+                    co_await thesoup::types::Unit::unit;
+                }
+                *dest = (*it).get();
+                dest++;
+            }
+            co_return thesoup::types::Unit::unit;
         }
 
 
@@ -133,6 +137,17 @@ namespace thesoup {
             template<typename U> FutureComposer<U, ExecutorImpl> flatmap(std::function<std::future<U>(const T& val)> function) {
                 auto task {flatmap_coroutine<T, U, ExecutorImpl>(executor, std::move(fut), function)};
                 return FutureComposer<U, ExecutorImpl>(executor, std::move(task.future));
+            }
+
+            template <typename U> FutureComposer<std::tuple<T, U>, ExecutorImpl> join(std::future<U>&& other) {
+                auto task {join_coroutine<T, U, ExecutorImpl>(executor, std::move(fut), std::move(other))};
+                return FutureComposer<std::tuple<T, U>, ExecutorImpl>(executor, std::move(task.future));
+            }
+
+            template <typename InputIterType, typename OutputIterType>
+            static FutureComposer<thesoup::types::Unit, ExecutorImpl> collect(std::reference_wrapper<ExecutorImpl> exec, InputIterType begin, InputIterType end, OutputIterType dest) {
+                auto task {collect_coroutine<T, ExecutorImpl, InputIterType, OutputIterType>(exec, begin, end, dest)};
+                return FutureComposer<thesoup::types::Unit, ExecutorImpl>(exec, std::move(task.future));
             }
 
             std::future<T> get_future() {

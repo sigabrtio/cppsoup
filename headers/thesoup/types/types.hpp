@@ -250,6 +250,10 @@ namespace thesoup {
             static constexpr bool value {false};
         };
 
+        template <typename It,typename T, typename=void> struct IsOutputIteratorOfType {
+            static constexpr bool value {false};
+        };
+
         /**
         * \class IsTemplateSpecialization
         *
@@ -292,6 +296,15 @@ namespace thesoup {
                                 std::is_same<typename std::iterator_traits<It>::value_type, T>::value
                         )
                 >::type
+        >  {
+            static constexpr bool value {true};
+        };
+
+        template <typename It, typename T>
+        struct IsOutputIteratorOfType<
+                It,
+                T,
+                typename std::enable_if<std::is_same<typename std::iterator_traits<It>::iterator_category, std::output_iterator_tag>::value>::type
         >  {
             static constexpr bool value {true};
         };

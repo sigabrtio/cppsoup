@@ -1,10 +1,9 @@
 #define CATCH_CONFIG_MAIN
 
 #include <algorithm>
-#include <exception>
 #include <future>
 #include <string>
-#include <iostream>
+#include <tuple>
 
 #include <catch2/catch_all.hpp>
 #include <thesoup/async/functions.hpp>
@@ -16,54 +15,8 @@ using thesoup::async::make_ready_future;
 using thesoup::async::make_bad_future;
 using thesoup::async::RoundRobinCoroExecutor;
 using thesoup::async::FutureComposer;
-/*
-SCENARIO("Collect test.") {
 
-    GIVEN("When I have a list of futures.") {
-
-        std::vector<int> inputs {1,2,3,4,5};
-        std::vector<std::future<int>> futures;
-
-        std::transform(
-                inputs.begin(),
-                inputs.end(),
-                std::back_inserter(futures),
-                make_ready_future<int>);
-
-        WHEN("I collect the futures.") {
-
-            std::future<std::vector<int>> collected_fut {collect_futures(futures)};
-
-            THEN("Then the result should be 1 future that yields a vector of the individual values.") {
-
-                REQUIRE(collected_fut.get() == inputs);
-            }
-        }
-
-    }
-
-    GIVEN("I have a list of futures, one of which throws an exception.") {
-
-        std::vector<std::future<int>> futures;
-        futures.emplace_back(make_ready_future<int>(1));
-        futures.emplace_back(make_ready_future<int>(2));
-        futures.emplace_back(make_bad_future<int, std::runtime_error>(std::runtime_error("")));
-        futures.emplace_back(make_ready_future<int>(4));
-        futures.emplace_back(make_ready_future<int>(5));
-
-        WHEN("I do a get on the collected futures.") {
-
-            THEN("The future should be an error.") {
-
-                REQUIRE_THROWS_AS(collect_futures(futures).get(), std::runtime_error);
-            }
-        }
-
-    }
-}
-*/
-
-SCENARIO("Future map test.") {
+SCENARIO("Future map, flatmap test test.") {
 
     GIVEN("I have a future and an executor.") {
 
@@ -140,6 +93,79 @@ SCENARIO("Future map test.") {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+SCENARIO("Future composer join test.") {
+
+    GIVEN("I have a executor, and some futures.") {
+
+        RoundRobinCoroExecutor exec;
+        std::promise<int> p1;
+        std::promise<bool> p2;
+
+        std::future<int> f1 {p1.get_future()};
+        std::future<bool> f2 {p2.get_future()};
+
+        WHEN("I join them.") {
+
+            std::future<std::tuple<int, bool>> final {
+                FutureComposer<int, RoundRobinCoroExecutor>(exec, std::move(f1))
+                        .join(std::move(f2))
+                        .get_future()
+
+            };
+
+            THEN("I can wait on the joined future.") {
+
+                REQUIRE_FALSE(is_ready(final));
+                p1.set_value(123);
+                p2.set_value(false);
+
+                exec.step();
+
+                REQUIRE(is_ready(final));
+                const auto& [i,b] = final.get();
+                REQUIRE(123 == i);
+                REQUIRE_FALSE(b);
+            }
+        }
+    }
+}
+
+SCENARIO("Future composer collect test.") {
+
+    GIVEN("I have an executor and a vector of futures and an output vector.") {
+
+        RoundRobinCoroExecutor exec;
+        std::vector<std::promise<int>> promises {};
+        std::vector<std::future<int>> futures {};
+
+        for (int i = 0; i < 10; i++) {
+            promises.emplace_back();
+            futures.push_back(promises[i].get_future());
+        }
+
+        WHEN("I collect the futures into a new vector.") {
+
+            std::vector<int> collected {};
+            std::future<thesoup::types::Unit> final{
+                    FutureComposer<int, RoundRobinCoroExecutor>::collect(exec, futures.begin(), futures.end(), std::back_inserter(collected))
+                            .get_future()};
+
+            THEN("I should get back a vector of collected results.") {
+
+                REQUIRE_FALSE(is_ready(final));
+                for (int i = 0; i < 10; i++) {
+                    promises[i].set_value(i);
+                }
+                exec.step();
+                REQUIRE(is_ready(final));
+                for (int i = 0; i < 10; i++) {
+                    REQUIRE(i == collected[i]);
                 }
             }
         }
