@@ -9,7 +9,6 @@
 #include <thesoup/async/functions.hpp>
 #include <thesoup/async/round_robin_threadpool.hpp>
 
-using thesoup::async::collect_futures;
 using thesoup::async::is_ready;
 using thesoup::async::make_ready_future;
 using thesoup::async::make_bad_future;
