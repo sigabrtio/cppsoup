@@ -8,14 +8,25 @@
 
 #include <thesoup/async/types.hpp>
 
+/**
+ * \namespace thesoup
+ *
+ * \brief The root namespace.
+ * */
 namespace thesoup {
 
+    /**
+     * \namespace thesoup::async
+     *
+     * \brief Sub namespace with some async utilities.
+     * */
     namespace async {
 
         class RoundRobinCoroExecutor: public CoroExecutorInterface<RoundRobinCoroExecutor> {
         private:
             std::list<std::coroutine_handle<>> handles {};
             std::atomic<std::size_t> num_open_tasks;
+            std::atomic<bool> run {true};
             std::mutex lock;
 
         public:
@@ -28,10 +39,14 @@ namespace thesoup {
             std::future<void> start() noexcept {
                 return std::async(
                         [&]() {
-                            while (true) {
+                            while (run) {
                                 step();
                             }
                         });
+            }
+
+            void stop() noexcept {
+                run = false;
             }
 
             void step() noexcept {
@@ -49,7 +64,7 @@ namespace thesoup {
                 }
             }
 
-            std::size_t size() const noexcept {
+            [[nodiscard]] std::size_t size() const noexcept {
                 return num_open_tasks;
             }
         };
