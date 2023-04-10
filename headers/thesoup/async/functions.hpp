@@ -74,11 +74,21 @@ namespace thesoup {
         }
 
         //!\cond NO_DOC
-        template <typename T, typename U, class ExecutorImpl>
-        SingleValueCoroTask<U, ExecutorImpl> map_coroutine(
+        template <typename Callable, typename T, typename U>
+        concept is_map_function = requires (Callable callable, T input, U output) {
+            {callable(input)} -> std::same_as<U>;
+        };
+
+        template <typename Callable, typename T, typename U>
+        concept is_flatmap_function = requires (Callable callable, T input, U output) {
+            {callable(input)} -> std::same_as<std::future<U>>;
+        };
+
+        template <typename T, typename U, class ExecutorImpl, typename Callable>
+        thesoup::async::SingleValueCoroTask<U, ExecutorImpl> map_coroutine(
                 std::reference_wrapper<CoroExecutorInterface<ExecutorImpl>> executor,
                 std::future<T> input_fut,
-                const typename std::function<U(const T&)> function) {
+                const Callable function) requires is_map_function<Callable, T, U> {
             co_await executor;
             while (!is_ready(input_fut)) {
                 co_await thesoup::types::Unit::unit;
@@ -86,11 +96,11 @@ namespace thesoup {
             co_return function(input_fut.get());
         }
 
-        template <typename T, typename U, class ExecutorImpl>
+        template <typename T, typename U, class ExecutorImpl, typename Callable>
         SingleValueCoroTask<U, ExecutorImpl> flatmap_coroutine(
                 std::reference_wrapper<CoroExecutorInterface<ExecutorImpl>> executor,
                 std::future<T> input_fut,
-                std::function<std::future<U>(const T&)> function) {
+                Callable function) requires is_flatmap_function<Callable, T, U> {
             co_await executor;
             while (!is_ready(input_fut)) {
                 co_await thesoup::types::Unit::unit;
@@ -197,7 +207,7 @@ namespace thesoup {
              * std::future<Record> rec = fetch_record_from_sql_by_id(123);
              *
              * std::future<std::string> name_fut = FutureComposer<int, RoundRobinCoroExecutor>(exec, std::move(rec))
-             *     .map(Record::get_name)
+             *     .map<std::string>(Record::get_name)
              *     .get_future();
              *
              * ```
@@ -206,8 +216,9 @@ namespace thesoup {
              * @param function The mapping function
              * @return A FutureComposer<U>
              */
-            template<typename U> FutureComposer<U, ExecutorImpl> map(const std::function<U(const T& val)> function) {
-                auto task {map_coroutine<T, U, ExecutorImpl>(executor, std::move(fut), function)};
+            template<typename U, typename Callable> FutureComposer<U, ExecutorImpl> map(const Callable function)
+            requires is_map_function<Callable, T, U> {
+                auto task {map_coroutine<T, U, ExecutorImpl, Callable>(executor, std::move(fut), function)};
                 return FutureComposer<U, ExecutorImpl>(executor, std::move(task.future));
             }
 
@@ -227,8 +238,8 @@ namespace thesoup {
              * std::future<int> id_fut = search_id_by_name("Amartya Datta Gupta");
              *
              * std::future<std::string> name_fut = FutureComposer<int, RoundRobinCoroExecutor>(exec, std::move(id_fut))
-             *     .flat_map(fetch_record_from_sql_by_id)
-             *     .map(Record::get_name)
+             *     .flat_map<Record>(fetch_record_from_sql_by_id)
+             *     .map<std::string>(Record::get_name)
              *     .get_future();
              *
              * ```
@@ -241,7 +252,8 @@ namespace thesoup {
              * @param function The function that generates the next future
              * @return A FutureComposer<U>
              */
-            template<typename U> FutureComposer<U, ExecutorImpl> flatmap(std::function<std::future<U>(const T& val)> function) {
+            template<typename U, typename Callable> FutureComposer<U, ExecutorImpl> flatmap(Callable function)
+            requires is_flatmap_function<Callable, T, U> {
                 auto task {flatmap_coroutine<T, U, ExecutorImpl>(executor, std::move(fut), function)};
                 return FutureComposer<U, ExecutorImpl>(executor, std::move(task.future));
             }

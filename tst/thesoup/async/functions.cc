@@ -33,25 +33,20 @@ SCENARIO("Future map, flatmap test test.") {
             int flat_map_invocations {0};
             std::string flat_map_arg {};
 
-            std::function<std::string(const int&)> map_f = [&](const int& value) {
-                map_invocations++;
-                return std::to_string(value);
-            };
-
-            std::function<std::future<bool>(const std::string&)> flatmap_f = [&](const std::string& val) {
-                flat_map_invocations++;
-                flat_map_arg = val;
-                return std::move(flatmap_future);
-            };
-
-
             WHEN("I compose some futures using maps and flat-maps.") {
 
                 std::future<bool> final {
-                            FutureComposer<int, RoundRobinCoroExecutor>(std::reference_wrapper(exec), std::move(test_future))
-                                    .map(map_f)
-                                    .flatmap(flatmap_f)
-                                    .get_future()
+                    FutureComposer<int, RoundRobinCoroExecutor>(std::reference_wrapper(exec), std::move(test_future))
+                        .map<std::string>([&](const int& value) -> std::string {
+                            map_invocations++;
+                            return std::to_string(value);
+                        })
+                        .flatmap<bool>([&](const std::string& val) {
+                            flat_map_invocations++;
+                            flat_map_arg = val;
+                            return std::move(flatmap_future);
+                        })
+                        .get_future()
                     };
 
                 THEN("Initially it should be not ready.") {
