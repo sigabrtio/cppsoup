@@ -6,7 +6,7 @@
 #include <tuple>
 
 #include <catch2/catch_all.hpp>
-#include <thesoup/async/functions.hpp>
+#include <thesoup/async/futures.hpp>
 #include <thesoup/async/round_robin_threadpool.hpp>
 
 using thesoup::async::is_ready;

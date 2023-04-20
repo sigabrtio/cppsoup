@@ -5,7 +5,7 @@
 
 #include <thesoup/types/types.hpp>
 #include <thesoup/types/graph.hpp>
-#include <thesoup/async/functions.hpp>
+#include <thesoup/async/futures.hpp>
 
 /**
  * \namespace thesoup
@@ -20,6 +20,10 @@ namespace thesoup {
      * \brief Sub namespace with all algorithms.
      * */
     namespace algorithms {
+        template<class Impl, class ExecutorImpl, typename V_TYPE, typename E_TYPE, typename ERR, typename VID_TYPE=V_TYPE, typename EID_TYPE=E_TYPE>
+        thesoup::async::SingleValueCoroTask<thesoup::types::Result<thesoup::types::Unit, ERR>, ExecutorImpl> bfs_coroutine() {
+
+        }
 
         /**
          * \brief Implement the bfs graph traversal method.

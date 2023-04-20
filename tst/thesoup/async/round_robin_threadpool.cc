@@ -7,7 +7,7 @@
 #include <thesoup/async/types.hpp>
 #include <thesoup/async/round_robin_threadpool.hpp>
 #include <thesoup/types/types.hpp>
-#include <thesoup/async/functions.hpp>
+#include <thesoup/async/futures.hpp>
 
 using thesoup::async::RoundRobinCoroExecutor;
 using thesoup::async::SingleValueCoroTask;

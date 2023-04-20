@@ -8,7 +8,7 @@
 
 #include <thesoup/types/types.hpp>
 #include <thesoup/types/graph.hpp>
-#include <thesoup/async/functions.hpp>
+#include <thesoup/async/futures.hpp>
 
 /**
  * \namespace thesoup

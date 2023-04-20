@@ -8,7 +8,7 @@
 #include <set>
 #include <unordered_map>
 
-#include <thesoup/async/functions.hpp>
+#include <thesoup/async/futures.hpp>
 #include <thesoup/types/graph.hpp>
 #include <thesoup/types/types.hpp>
 
