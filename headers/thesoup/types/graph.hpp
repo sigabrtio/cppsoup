@@ -207,7 +207,7 @@ namespace thesoup {
              * \brief Delete an edge.
              *
              * This method deletes an edge. The return value ia a `thesoup::types::Result` object. The implementation is
-             * free to ma e this an idempotent operation or just throw an error when things are invalid.
+             * free to make this an idempotent operation or just throw an error when things are invalid.
              *
              * @param edge
              * @return

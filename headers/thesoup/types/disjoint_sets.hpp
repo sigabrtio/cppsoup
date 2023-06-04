@@ -119,7 +119,7 @@ namespace thesoup {
              *
              * \return Number of sets (std::size_t)
              */
-            std::size_t size() const noexcept {
+            [[nodiscard]] std::size_t size() const noexcept {
                 return sets.size();
             }
 
