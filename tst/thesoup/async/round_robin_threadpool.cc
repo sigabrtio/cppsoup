@@ -41,6 +41,13 @@ SingleValueCoroTask<int, RoundRobinCoroExecutor> my_throwable_routine(
     co_return acc;
 };
 
+SingleValueCoroTask<const Unit, RoundRobinCoroExecutor> my_routine_accidental_schedule_twice(
+        std::reference_wrapper<RoundRobinCoroExecutor> executor) {
+    co_await executor;
+    co_await executor;
+    co_return Unit::unit;
+};
+
 SCENARIO("Round robin executor test") {
 
     GIVEN("I have a round robin coroutine executor.") {
@@ -144,6 +151,37 @@ SCENARIO("Coroutine throws exceptions.") {
                         REQUIRE(10 == task_1.future.get());
                         REQUIRE_THROWS_AS(task_2.future.get(), std::runtime_error);
                     }
+                }
+            }
+        }
+    }
+}
+
+SCENARIO("Double await on the executor in the coroutine.") {
+
+    GIVEN("I have a round robin coroutine executor.") {
+
+        RoundRobinCoroExecutor executor{};
+
+        AND_GIVEN("I have a co-routine that accidentally co-awaits twice on the executor, potentially scheduling the task twice.") {
+
+            WHEN("I schedule that coroutine") {
+                auto task1 {my_routine_accidental_schedule_twice(executor)};
+
+                THEN("The task queue size should never be more than 1.") {
+
+                    // Initially queued by first co_await
+                    REQUIRE(1 == executor.size());
+                    executor.step();
+                    // second co_await. Task waits here, but nothing is re-queued]
+                    REQUIRE(1 == executor.size());
+                    executor.step();
+                    // Task finish, stopped to be cleaned on final_suspend
+                    REQUIRE(1 == executor.size());
+                    executor.step();
+                    // Task cleaned up
+                    REQUIRE(0 == executor.size());
+
                 }
             }
         }

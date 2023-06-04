@@ -133,31 +133,85 @@ namespace thesoup {
         template<class Child, typename V_TYPE, typename E_TYPE, typename ERR, typename VID_TYPE=V_TYPE, typename EID_TYPE=E_TYPE>
         class Graph {
         public:
+            /**
+             * \brief Method that returns all neighbours of a vertex
+             *
+             * This method returns all neighbours of a given vertex, regardless of the type of edge they are connected
+             * with. The return value ia a `thesoup::types::Result` object.
+             *
+             * @param vertex
+             * @return A `Result` object containing a `std::vector` of all thee connected vertices.
+             */
             std::future<thesoup::types::Result<std::vector<Neighbour<VID_TYPE, EID_TYPE>>, ERR>>
             get_neighbours(const VID_TYPE& vertex) const noexcept {
                 return static_cast<const Child*>(this)->get_neighbours(vertex);
             }
 
+            /**
+             * \brief Return all neighbours that are connected to a given vertex via a certain edge type.
+             *
+             * This method returns a `std::vector` of all the vertices connected to a given vertex via a certain edge type.
+             * The return value ia a `thesoup::types::Result` object.
+             *
+             * @param vertex
+             * @param edge_type
+             * @return
+             */
             std::future<thesoup::types::Result<std::vector<VID_TYPE>, ERR>>
             get_neighbours(const VID_TYPE& vertex, const EID_TYPE& edge_type) const noexcept{
                 return static_cast<const Child*>(this)->get_neighbours(vertex, edge_type);
             }
 
+            /**
+             * \brief Insert a vertex.
+             *
+             * This method inserts a new vertex in the graph. The return value ia a `thesoup::types::Result` object.
+             * @param vertex
+             * @return
+             */
             std::future<thesoup::types::Result<VID_TYPE, ERR>>
             insert_vertex(const V_TYPE& vertex) noexcept {
                 return static_cast<Child*>(this)->insert_vertex(vertex);
             }
 
+            /**
+             * \brief Insert a new edge between 2 vertices.
+             *
+             * This method inserts an edge between 2 existing vertices. The return value ia a `thesoup::types::Result`
+             * object. Of course this fails when 1 or both of the vertices do not exist.
+             *
+             * @param edge
+             * @return
+             */
             std::future<thesoup::types::Result<thesoup::types::Unit, ERR>>
                 insert_edge(const Edge<VID_TYPE, EID_TYPE>& edge) noexcept {
                 return static_cast<Child*>(this)->insert_edge(edge);
             }
 
+            /**
+             * \brief Delete a given vertex.
+             *
+             * This method helps delete a given vertex. The return value ia a `thesoup::types::Result` object. The
+             * implementation is free to make this an idempotent operation or something that causes an error on invalid
+             * deletes
+             *
+             * @param vertex The vertex to delete.
+             * @return Nothing
+             */
             std::future<thesoup::types::Result<thesoup::types::Unit, ERR>>
             delete_vertex(const VID_TYPE& vertex) noexcept {
                 return static_cast<Child*>(this)->delete_vertex(vertex);
             }
 
+            /**
+             * \brief Delete an edge.
+             *
+             * This method deletes an edge. The return value ia a `thesoup::types::Result` object. The implementation is
+             * free to ma e this an idempotent operation or just throw an error when things are invalid.
+             *
+             * @param edge
+             * @return
+             */
             std::future<thesoup::types::Result<thesoup::types::Unit, ERR>>
             delete_edge(const Edge<VID_TYPE, EID_TYPE>& edge) noexcept {
                 return static_cast<Child*>(this)->delete_edge(edge);
