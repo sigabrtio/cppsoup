@@ -148,7 +148,10 @@ namespace thesoup {
             }
             co_return thesoup::types::Unit::unit;
         }
+
+        template <typename T, typename ExecutorImpl=void, typename=void> class FutureComposer;
         //!\endcond
+
 
         /**
          * \brief A class to help compose futures.
@@ -168,7 +171,7 @@ namespace thesoup {
          *   std::future<std::string> fut = search_id_by_name_from_sql("Amartya Datta Gupta");
          *   std::function<int(const std::string& val) f = [&](const std::string& id) {return to_int(id);};
          *
-         *   std::suture<Record> rec = FutureComposer<std::string, RoundRobinCoroExecutor>(exec, std::move(fut))
+         *   std::future<Record> rec = FutureComposer<std::string, RoundRobinCoroExecutor>(exec, std::move(fut))
          *       .map(f)
          *       .flat_map(fetch_record_from_sql_by_id)
          *       .get_future();
@@ -176,10 +179,10 @@ namespace thesoup {
          *   ```
          *
          * @tparam T
-         * @tparam ExecutorImpl
+         * @tparam ExecutorImpl n_set_a {graph.get_neighbours('A').get().unwrap()};
          */
         template <typename T, typename ExecutorImpl>
-        class FutureComposer {
+        class FutureComposer<T, ExecutorImpl, typename std::enable_if<std::is_base_of<CoroExecutorInterface<ExecutorImpl>, ExecutorImpl>::value>::type> {
         private:
             static_assert(
                     std::is_base_of<CoroExecutorInterface<ExecutorImpl>, ExecutorImpl>::value,
@@ -191,6 +194,14 @@ namespace thesoup {
             FutureComposer(
                     const std::reference_wrapper<CoroExecutorInterface<ExecutorImpl>>& executor,
                     std::future<T>&& fut) : executor {executor}, fut {std::move(fut)} {}
+            FutureComposer(const FutureComposer&& other)  noexcept : fut {std::move(other.fut)}, is_valid {other.is_valid} {
+                other.is_valid = false;
+            }
+
+            FutureComposer(const FutureComposer<T, void, void>&)=delete;
+            FutureComposer operator=(const FutureComposer&)=delete;
+            FutureComposer operator=(const FutureComposer&&)=delete;
+
 
             /**
              * \brief Map composer.
@@ -317,6 +328,213 @@ namespace thesoup {
             static FutureComposer<thesoup::types::Unit, ExecutorImpl> collect(std::reference_wrapper<ExecutorImpl> exec, InputIterType begin, InputIterType end, OutputIterType dest) {
                 auto task {collect_coroutine<T, ExecutorImpl, InputIterType, OutputIterType>(exec, begin, end, dest)};
                 return FutureComposer<thesoup::types::Unit, ExecutorImpl>(exec, std::move(task.future));
+            }
+
+            /**
+             * \brief Get the future.
+             *
+             * This function returns the future object inside the composer.
+             *
+             * @return
+             */
+            std::future<T> get_future() {
+                if (!is_valid) {
+                    throw std::runtime_error("Invalid future.");
+                } else {
+                    is_valid = false;
+                    return std::move(fut);
+                }
+            }
+        };
+
+        /**
+         * \brief A class to help compose futures.
+         *
+         * This class helps compose futures. As opposed to the implementation that uses a `CoroExecutorInterface`
+         * implementation to wait on futures, this implementation uses `std::async` to launch threads in the background
+         * that call `wait` functions on the future and are blocked in the background.
+         *
+         * It supports the following operations:
+         *   - map
+         *   - flat-map
+         *   - join
+         *   - collect
+         *   The details of each is in the doc of the functions themselves. Here is some broad usage examples:
+         *
+         *   ```
+         *   std::future<std::string> search_id_by_name_from_sql(const std::string& name); // Returns a string representing a int like "123"
+         *   std::future<Record> fetch_record_from_sql_by_id(int id);
+         *
+         *   std::future<std::string> fut = search_id_by_name_from_sql("Amartya Datta Gupta");
+         *   std::function<int(const std::string& val) f = [&](const std::string& id) {return to_int(id);};
+         *
+         *   std::future<Record> rec = FutureComposer<std::string>(std::move(fut))
+         *       .map(f)
+         *       .flat_map(fetch_record_from_sql_by_id)
+         *       .get_future();
+         *
+         *   ```
+         *
+         * @tparam T
+         * @tparam ExecutorImpl n_set_a {graph.get_neighbours('A').get().unwrap()};
+         */
+        template <typename T>
+        class FutureComposer<T, void, void> {
+        private:
+            std::future<T> fut;
+            bool is_valid {true};
+        public:
+            explicit FutureComposer(std::future<T>&& fut) : fut {std::move(fut)} {}
+            FutureComposer(FutureComposer&& other)  noexcept : fut {std::move(other.fut)}, is_valid {other.is_valid} {
+                other.is_valid = false;
+            }
+
+            FutureComposer(const FutureComposer&)=delete;
+            FutureComposer operator=(const FutureComposer&)=delete;
+            FutureComposer operator=(const FutureComposer&&)=delete;
+
+            /**
+             * \brief Map composer.
+             *
+             * This method maps the return value of a future via an input function. It returns a future which when ready
+             * is supposed to return the mapped value. Basically this allows us to return a future, while we wait on the
+             * original future to complete in the background. Then we apply the mapping and set the value off the returned
+             * future.
+             *
+             * Example usage:
+             *
+             * ```
+             *
+             * std::future<Record> rec = fetch_record_from_sql_by_id(123);
+             *
+             * std::future<std::string> name_fut = FutureComposer<int>(std::move(rec))
+             *     .map<std::string>(Record::get_name)
+             *     .get_future();
+             *
+             * ```
+             *
+             * @tparam U The mapped future's type
+             * @param function The mapping function
+             * @return A FutureComposer<U>
+             */
+            template<typename U, typename Callable> FutureComposer<U> map(const Callable function)
+            requires is_map_function<Callable, T, U> {
+                std::future<U> returned_future {std::async(std::launch::async, [moved_fut = std::move(fut), function]() mutable {
+                    return function(moved_fut.get());
+                })};
+                return FutureComposer<U>(std::move(returned_future));
+            }
+
+            /**
+             * \brief Flatmap composer.
+             *
+             * This function allows us to wait on a future in the background, get it's return value and pass it to a
+             * function that returns another future in response. We return this final future.
+             *
+             * Example usage:
+             *
+             * ```
+             *
+             * std::future<int> search_id_by_name(const std::string& name);
+             * std::future<Record> fetch_record_from_sql_by_id(123);
+             *
+             * std::future<int> id_fut = search_id_by_name("Amartya Datta Gupta");
+             *
+             * std::future<std::string> name_fut = FutureComposer<int>(std::move(id_fut))
+             *     .flat_map<Record>(fetch_record_from_sql_by_id)
+             *     .map<std::string>(Record::get_name)
+             *     .get_future();
+             *
+             * ```
+             *
+             * @tparam U The flat-mapped future's type
+             * @param function The function that generates the next future
+             * @return A FutureComposer<U>
+             */
+            template<typename U, typename Callable> FutureComposer<U> flatmap(Callable function)
+            requires is_flatmap_function<Callable, T, U> {
+                std::future<U> return_future {
+                    std::async([moved_fut = std::move(fut), function]() mutable -> U {
+                        return function(moved_fut.get()).get();
+                    })
+                };
+                return FutureComposer<U>(std::move(return_future));
+            }
+
+            /**
+             * \brief Join 2 futures.
+             *
+             * This function helps us join 2 futures of type T and U and return a future of type std::tuple<T, U>.
+             *
+             * Example usage:
+             *
+             * ```
+             *
+             * std::future<int> f1 = ...;
+             * std::future<std::string> f2 = ...;
+             *
+             * std::future<std::tuple<int, std::string>> combined {
+             *   FutureComposer<int>(f1)
+             *       .join(f2)
+             *       .get_future()
+             * };
+             *
+             * ```
+             *
+             * @tparam U The type of the future that we want to join with.
+             * @param other
+             * @return A FutureComposer<std::tuple<T, U>, ExecutorImpl> object
+             */
+            template <typename U> FutureComposer<std::tuple<T, U>, void, void> join(std::future<U>&& other) {
+                std::future<std::tuple<T, U>> return_future {
+                    std::async([moved_fut = std::move(fut), moved_other = std::move(other)] () mutable {
+                        return std::make_tuple(moved_fut.get(), moved_other.get());
+                    })
+                };
+                return FutureComposer<std::tuple<T, U>>(std::move(return_future));
+            }
+
+            /**
+             * \brief Collect futures.
+             *
+             * This static function allows us to collect futures into 1 collection. Imagine we have a collection of
+             * std::future<int> typed. We want to convert it to a single collection of ints. See example below to see
+             * how this might work.
+             *
+             * ```
+             * std::vector<std::future<int>> id_futures = ...;
+             * std::vector<int> ids {};
+             *
+             * std::future<Unit> fut {
+             *     FutureComposer<int>::collect(exec, id_futures.begin(), id_futures.end(), std::back_inserter(ids));
+             * };
+             * ```
+             *
+             * In the above example, when the `fut` is ready, the ids vector should be expected to be filled out.
+             *
+             * @tparam InputIterType Input iterator type. This is inferred. No need to explicitly provide this parameter.
+             * @tparam OutputIterType Output iterator type. This is inferred. No need to explicitly provide this parameter.
+             * @param exec The coroutine thread pool executor.
+             * @param begin Start iterator for input collection.
+             * @param end End iterator for input collection.
+             * @param dest Output iterator for output collection.
+             * @return A FutureComposer<Unit> object
+             */
+            template <typename InputIterType, typename OutputIterType>
+            static FutureComposer<thesoup::types::Unit, void, void> collect(InputIterType begin, InputIterType end, OutputIterType dest) {
+                static_assert(thesoup::types::IsForwardIteratorOfType<InputIterType, std::future<T>>::value, "Expect a forward iterator of type std::future<T> for input.");
+                static_assert(thesoup::types::IsOutputIteratorOfType<OutputIterType, T>::value, "Expect a output iterator of type T for output.");
+
+                std::future<thesoup::types::Unit> return_future {
+                    std::async([begin, end, dest]() mutable {
+                        for (auto it = begin; it < end; it++) {
+                            *dest = (*it).get();
+                            dest++;
+                        }
+                        return thesoup::types::Unit::unit;
+                    }
+                )};
+                return FutureComposer<thesoup::types::Unit, void, void>(std::move(return_future));
             }
 
             /**

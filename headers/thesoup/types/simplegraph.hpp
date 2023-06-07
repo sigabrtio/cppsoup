@@ -40,9 +40,21 @@ namespace thesoup {
          * \brief A simple weighted graph
          *
          * This class represents a thesoup::types::Graph specialization, where the edge type is not a type, but a simple
-         * literal that has ordering on it. This is useful for analyzing things like shortest path, etc. Here there is
-         * no separate vertex and edge ID types (unlike thesoup::types::IndexedPropertyDiGraph). It is the same as the
-         * vertex and edge types.
+         * literal that has ordering on it, effectively making this a weighted graph. This is useful for simple graph
+         * applications like shortest path, etc.
+         *
+         * This is a fully in memory implementation, and is not thread safe.
+         *
+         * Example usage:
+         * ```
+         * SimpleWeightedGraph<char, float> graph {};
+         * graph.insert_vertex('A');
+         * graph.insert_vertex('B');
+         *
+         * graph.insert_edge({'A', 1.0f, 'B'});
+         *
+         * auto n_set_a {graph.get_neighbours('A').get().unwrap()};
+         * ```
          *
          * \tparam V_TYPE The vertex type
          * \tparam WEIGHT_TYPE The edge type

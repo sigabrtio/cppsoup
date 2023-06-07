@@ -133,7 +133,7 @@ namespace thesoup {
         template<class Child, typename V_TYPE, typename E_TYPE, typename ERR, typename VID_TYPE=V_TYPE, typename EID_TYPE=E_TYPE>
         class Graph {
         public:
-            /**
+            virtual /**
              * \brief Method that returns all neighbours of a vertex
              *
              * This method returns all neighbours of a given vertex, regardless of the type of edge they are connected
@@ -147,7 +147,7 @@ namespace thesoup {
                 return static_cast<const Child*>(this)->get_neighbours(vertex);
             }
 
-            /**
+            virtual /**
              * \brief Return all neighbours that are connected to a given vertex via a certain edge type.
              *
              * This method returns a `std::vector` of all the vertices connected to a given vertex via a certain edge type.
@@ -158,11 +158,11 @@ namespace thesoup {
              * @return
              */
             std::future<thesoup::types::Result<std::vector<VID_TYPE>, ERR>>
-            get_neighbours(const VID_TYPE& vertex, const EID_TYPE& edge_type) const noexcept{
+            get_neighbours(const VID_TYPE& vertex, const EID_TYPE& edge_type) const noexcept {
                 return static_cast<const Child*>(this)->get_neighbours(vertex, edge_type);
             }
 
-            /**
+            virtual /**
              * \brief Insert a vertex.
              *
              * This method inserts a new vertex in the graph. The return value ia a `thesoup::types::Result` object.
@@ -174,7 +174,7 @@ namespace thesoup {
                 return static_cast<Child*>(this)->insert_vertex(vertex);
             }
 
-            /**
+            virtual /**
              * \brief Insert a new edge between 2 vertices.
              *
              * This method inserts an edge between 2 existing vertices. The return value ia a `thesoup::types::Result`
@@ -188,7 +188,7 @@ namespace thesoup {
                 return static_cast<Child*>(this)->insert_edge(edge);
             }
 
-            /**
+            virtual /**
              * \brief Delete a given vertex.
              *
              * This method helps delete a given vertex. The return value ia a `thesoup::types::Result` object. The
@@ -203,7 +203,7 @@ namespace thesoup {
                 return static_cast<Child*>(this)->delete_vertex(vertex);
             }
 
-            /**
+            virtual /**
              * \brief Delete an edge.
              *
              * This method deletes an edge. The return value ia a `thesoup::types::Result` object. The implementation is

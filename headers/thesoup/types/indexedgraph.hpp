@@ -72,18 +72,14 @@ namespace thesoup {
         private:
             // Encapsulates both the incoming and outgoing edges.
             // The point of maintaining incoming edges count is tp enable advanced queries  and deletion operations.
-            struct _Edges {
+            struct Edges {
                 std::set<Neighbour<std::size_t, std::size_t>> outgoing_edges {};
                 std::set<Neighbour<std::size_t, std::size_t>> incoming_edges {};
             };
-            struct _VertexRecord {
-                // This struct encapsulates a vertex and all the housekeeping information needed.
-                V_TYPE vertex;
-                unsigned long incoming_edges;
-            };
+
             std::unordered_map<std::size_t, V_TYPE> vertex_index{};
             std::unordered_map<std::size_t, E_TYPE> edge_index{};
-            std::unordered_map<std::size_t, _Edges> adj_list{};
+            std::unordered_map<std::size_t, Edges> adj_list{};
 
 
         public:
@@ -164,7 +160,7 @@ namespace thesoup {
                     id = hash1 ^ (attempt_id + (hash1 << 6) + (hash1 >> 2) + 0x9e3779b9);
                     if (vertex_index.find(id) == vertex_index.end()) {
                         vertex_index.emplace(id, vertex);
-                        adj_list.emplace(id, _Edges{});
+                        adj_list.emplace(id, Edges{});
                     } else if (vertex_index.at(id) == vertex) {
                         return thesoup::async::make_ready_future(
                                 thesoup::types::Result<std::size_t, IndexedPropertyDiGraphAttributes::ErrorCode>::success(id));
@@ -336,7 +332,7 @@ namespace thesoup {
              * \param vertex The vertex whose neighbours to return
              * \return Result<List<Neighbour<vertex ID, edge type ID>>
              */
-            std::future<thesoup::types::Result<std::vector<thesoup::types::Neighbour<std::size_t, std::size_t>>, IndexedPropertyDiGraphAttributes::ErrorCode>>
+            [[nodiscard]] std::future<thesoup::types::Result<std::vector<thesoup::types::Neighbour<std::size_t, std::size_t>>, IndexedPropertyDiGraphAttributes::ErrorCode>>
             get_neighbours(const std::size_t &vertex) const noexcept {
                 if (vertex_index.find(vertex) == vertex_index.end()) {
                     return thesoup::async::make_ready_future(
@@ -363,8 +359,8 @@ namespace thesoup {
              * @param edge_type
              * @return
              */
-            std::future<thesoup::types::Result<std::vector<std::size_t>, IndexedPropertyDiGraphAttributes::ErrorCode>>
-            get_neighbours(const std::size_t &vertex, const std::size_t &edge_type) {
+            [[nodiscard]] std::future<thesoup::types::Result<std::vector<std::size_t>, IndexedPropertyDiGraphAttributes::ErrorCode>>
+            get_neighbours(const std::size_t &vertex, const std::size_t &edge_type) const noexcept {
                 if (vertex_index.find(vertex) == vertex_index.end()) {
                     return thesoup::async::make_ready_future(
                             thesoup::types::Result<std::vector<std::size_t>, IndexedPropertyDiGraphAttributes::ErrorCode>::failure(
@@ -400,7 +396,7 @@ namespace thesoup {
              * \param vertex The vertex whose neighbours to return
              * \return Result<List<Neighbour<vertex ID, edge type ID>>
              */
-            std::future<thesoup::types::Result<std::vector<thesoup::types::Neighbour<std::size_t, std::size_t>>, IndexedPropertyDiGraphAttributes::ErrorCode>>
+            [[nodiscard]] std::future<thesoup::types::Result<std::vector<thesoup::types::Neighbour<std::size_t, std::size_t>>, IndexedPropertyDiGraphAttributes::ErrorCode>>
             get_incoming_edges(const std::size_t &vertex) const noexcept {
                 if (vertex_index.find(vertex) == vertex_index.end()) {
                     return thesoup::async::make_ready_future(
