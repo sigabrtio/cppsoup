@@ -70,7 +70,6 @@ SCENARIO("BFS") {
                 auto res1{bfs(my_graph, 'A', visit_callback, exec)};
                 auto res2{bfs(my_graph, 'C', visit_callback_2, exec)};
 
-
                 THEN("The I should have traversed all reachable vertices.") {
 
                     std::unordered_set<char> expected_vertices {'A', 'B', 'C', 'D', 'E', 'F'};
