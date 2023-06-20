@@ -67,9 +67,6 @@ namespace thesoup {
          * @return true if ready else false
          */
         template <typename T> bool is_ready(const std::future<T>& fut) {
-            if (!fut.valid()) {
-                std::cout << "Future is INVALID!!!\n";
-            }
             return fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
         }
 

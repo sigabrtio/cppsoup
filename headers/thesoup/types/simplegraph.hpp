@@ -79,6 +79,7 @@ namespace thesoup {
             std::future<thesoup::types::Result<std::vector<Neighbour<V_TYPE, WEIGHT_TYPE>>, SimpleWeightedGraphAttributes::ErrorCode>>
             get_neighbours(const V_TYPE &vertex) const noexcept {
                 if (adj_list.find(vertex) == adj_list.end()) {
+                    std::cout <<  "NONEXISTING VERTEX " << vertex << "\n";
                     return thesoup::async::make_ready_future(
                             thesoup::types::Result<std::vector<Neighbour<V_TYPE, WEIGHT_TYPE>>, SimpleWeightedGraphAttributes::ErrorCode>::failure(
                                     SimpleWeightedGraphAttributes::ErrorCode::NON_EXISTENT_VERTEX));
