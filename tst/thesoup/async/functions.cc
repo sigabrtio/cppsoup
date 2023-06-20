@@ -260,7 +260,6 @@ SCENARIO("Future (no-coroutines) composer join test.") {
     }
 }
 
-
 SCENARIO("Future (no-coroutines) composer collect test.") {
 
     GIVEN("I have a vector of futures and an output vector.") {
