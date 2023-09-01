@@ -130,6 +130,43 @@ SCENARIO("Future composer join test.") {
     }
 }
 
+SCENARIO("Future composer join2 test.") {
+
+    GIVEN("I have a executor, and some futures.") {
+
+        RoundRobinCoroExecutor exec;
+        std::promise<int> p1;
+        std::promise<bool> p2;
+
+        std::future<int> f1 {p1.get_future()};
+        std::future<bool> f2 {p2.get_future()};
+
+        WHEN("I join them.") {
+
+            std::future<std::tuple<int, bool>> final {
+                    FutureComposer<int, RoundRobinCoroExecutor>(exec, std::move(f1))
+                            .join2(std::move(f2))
+                            .get_future()
+
+            };
+
+            THEN("I can wait on the joined future.") {
+
+                REQUIRE_FALSE(is_ready(final));
+                p1.set_value(123);
+                p2.set_value(false);
+
+                exec.step();
+
+                REQUIRE(is_ready(final));
+                const auto& [i,b] = final.get();
+                REQUIRE(123 == i);
+                REQUIRE_FALSE(b);
+            }
+        }
+    }
+}
+
 SCENARIO("Future composer collect test.") {
 
     GIVEN("I have an executor and a vector of futures and an output vector.") {

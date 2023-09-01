@@ -4,6 +4,7 @@
 #include <future>
 #include <functional>
 #include <type_traits>
+#include <tuple>
 
 #include <thesoup/async/types.hpp>
 #include <thesoup/types/types.hpp>
@@ -109,7 +110,7 @@ namespace thesoup {
             co_return next_fut.get();
         }
 
-        template <typename T, typename U, class ExecutorImpl>
+        template <class ExecutorImpl, typename T, typename U>
         SingleValueCoroTask<std::tuple<T, U>, ExecutorImpl> join_coroutine(
                 std::reference_wrapper<CoroExecutorInterface<ExecutorImpl>> executor,
                 std::future<T> input_fut_left,
@@ -124,6 +125,22 @@ namespace thesoup {
             co_return std::make_tuple(
                     input_fut_left.get(),
                     input_fut_right.get());
+        }
+
+        template <class ExecutorImpl, typename... Args>
+        SingleValueCoroTask<std::tuple<Args...>, ExecutorImpl> join_coroutine_2(
+                std::reference_wrapper<CoroExecutorInterface<ExecutorImpl>> executor,
+                Args... args) requires (thesoup::types::IsTemplateSpecialization<Args, std::future>::value && ...) {
+            co_await executor;
+            ( (
+        while (!
+        is_ready(args)
+        ) {
+        co_await
+        thesoup::types::Unit::unit;
+    };
+    ), ...);
+            co_return std::make_tuple((args.get(), ...));
         }
 
         template <typename T, class ExecutorImpl, typename InputIterType, typename OutputIterType>
@@ -291,8 +308,14 @@ namespace thesoup {
              * @return A FutureComposer<std::tuple<T, U>, ExecutorImpl> object
              */
             template <typename U> FutureComposer<std::tuple<T, U>, ExecutorImpl> join(std::future<U>&& other) {
-                auto task {join_coroutine<T, U, ExecutorImpl>(executor, std::move(fut), std::move(other))};
+                auto task {join_coroutine<ExecutorImpl, T, U>(executor, std::move(fut), std::move(other))};
                 return FutureComposer<std::tuple<T, U>, ExecutorImpl>(executor, std::move(task.future));
+            }
+
+            template <typename... Args> FutureComposer<std::tuple<Args...>, ExecutorImpl> join2(Args... args)
+                requires (thesoup::types::IsTemplateSpecialization<Args, std::future>::value && ...) {
+                auto task {join_coroutine_2<ExecutorImpl, Args...>(executor, (std::move(args), ...))};
+                return FutureComposer<std::tuple<Args...>, ExecutorImpl>(executor, std::move(task.future));
             }
 
             /**
